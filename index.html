@@ -1,1311 +1,410 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+```html
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gürbulak Terminal</title>
+    <!-- Mobil Uygulama Görünümü İçin -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#000000">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; -webkit-tap-highlight-color: transparent; }
+        .tabular-nums { font-variant-numeric: tabular-nums; }
+        ::-webkit-scrollbar { display: none; }
+        /* Modal Animasyonları */
+        .modal-enter { opacity: 1 !important; pointer-events: auto !important; }
+        .modal-content-enter { transform: translateY(0) !important; }
+    </style>
+</head>
+<body class="selection:bg-zinc-800 pb-24">
 
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const DEFAULT_CATEGORIES = [
-  { id: "tam_tespit", label: "Tam Tespit", amount: 7000, icon: "🔍" },
-  { id: "yarim_tespit", label: "Yarım Tespit", amount: 3500, icon: "🔎" },
-  { id: "koridor", label: "Koridor", amount: 3500, icon: "🚪" },
-  { id: "kapak", label: "Kapak", amount: 1250, icon: "📦" },
-  { id: "sontaj", label: "Sontaj", amount: 1250, icon: "🔧" },
-  { id: "palet", label: "Palet Başı", amount: 1000, icon: "🪟" },
-  { id: "mazot", label: "Mazot (Tır)", amount: 1000, icon: "⛽" },
-];
+    <!-- Üst Bilgi -->
+    <header class="pt-6 pb-4 px-6 sticky top-0 bg-black/90 backdrop-blur-md z-40 border-b border-zinc-900">
+        <h1 class="text-xl font-black uppercase tracking-widest text-center text-white">Gürbulak Terminal</h1>
+    </header>
 
-const DEFAULT_EXPENSE_CATEGORIES = [
-  { id: "yemek", label: "Yemek", icon: "🍽️" },
-  { id: "cay", label: "Çay/Kahve", icon: "☕" },
-  { id: "avans", label: "Avans", icon: "💸" },
-  { id: "diger", label: "Diğer", icon: "📝" },
-];
+    <!-- Ana İçerik Buraya Gelecek -->
+    <main id="app-root" class="p-4 max-w-md mx-auto"></main>
 
-const DEFAULT_WORKER_COUNT = 15;
-
-// ─── STORAGE SERVICE ──────────────────────────────────────────────────────────
-const storage = {
-  get: (key, fallback = null) => {
-    try {
-      const val = localStorage.getItem(key);
-      return val ? JSON.parse(val) : fallback;
-    } catch { return fallback; }
-  },
-  set: (key, value) => {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-  },
-};
-
-// ─── UTILS ────────────────────────────────────────────────────────────────────
-const uuid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
-const fmt = (n) => new Intl.NumberFormat("tr-TR").format(Math.round(n)) + "₺";
-const fmtDate = (iso) => {
-  const d = new Date(iso);
-  return d.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
-};
-const fmtTime = (iso) => new Date(iso).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
-const fmtShort = (iso) => new Date(iso).toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
-
-// ─── FINANCIAL ENGINE ─────────────────────────────────────────────────────────
-function calcMetrics(shift) {
-  const income = shift.transactions
-    .filter((t) => t.type === "INCOME")
-    .reduce((s, t) => s + t.amount, 0);
-  const expense = shift.transactions
-    .filter((t) => t.type === "EXPENSE")
-    .reduce((s, t) => s + t.amount, 0);
-  const net = income - expense;
-  const perPerson = shift.workerCount > 0 ? net / shift.workerCount : 0;
-  return { income, expense, net, perPerson };
-}
-
-// ─── SHARE TEXT ───────────────────────────────────────────────────────────────
-function buildShareText(shift) {
-  const m = calcMetrics(shift);
-  const tirCount = shift.transactions.filter((t) => t.type === "INCOME").length;
-  return (
-    `📋 Vardiya Özeti\n` +
-    `📅 Tarih: ${fmtDate(shift.date)}\n` +
-    `🚛 İşlem Sayısı: ${tirCount}\n` +
-    `💰 Brüt Kasa: ${fmt(m.income)}\n` +
-    `📉 Giderler: ${fmt(m.expense)}\n` +
-    `👥 Çalışan: ${shift.workerCount} Kişi\n` +
-    `✅ Kişi Başı Net Yevmiye: ${fmt(m.perPerson)}`
-  );
-}
-
-// ─── STYLES ───────────────────────────────────────────────────────────────────
-const css = `
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --bg: #080808;
-    --surface: #111111;
-    --surface2: #1a1a1a;
-    --border: #242424;
-    --border2: #2e2e2e;
-    --text: #f0f0f0;
-    --text2: #888888;
-    --text3: #555555;
-    --accent: #ffffff;
-    --green: #4ade80;
-    --red: #f87171;
-    --yellow: #fbbf24;
-    --mono: 'JetBrains Mono', monospace;
-    --sans: 'DM Sans', sans-serif;
-  }
-
-  html, body, #root { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
-
-  body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
-
-  .app {
-    max-width: 480px;
-    margin: 0 auto;
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-  }
-
-  /* HEADER */
-  .header {
-    padding: 16px 20px 12px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg);
-    position: sticky;
-    top: 0;
-    z-index: 50;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .header-logo {
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.15em;
-    color: var(--text3);
-    text-transform: uppercase;
-  }
-  .header-title {
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-  .header-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 10px;
-    border-radius: 100px;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
-  .badge-active { background: rgba(74,222,128,0.12); color: var(--green); border: 1px solid rgba(74,222,128,0.25); }
-  .badge-idle { background: var(--surface); color: var(--text3); border: 1px solid var(--border); }
-  .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-  /* NAV */
-  .nav {
-    display: flex;
-    background: var(--bg);
-    border-top: 1px solid var(--border);
-    position: sticky;
-    bottom: 0;
-    z-index: 50;
-  }
-  .nav-btn {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 10px 0 12px;
-    background: none;
-    border: none;
-    color: var(--text3);
-    font-family: var(--sans);
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: color 0.15s;
-    min-height: 56px;
-  }
-  .nav-btn.active { color: var(--text); }
-  .nav-btn svg { width: 20px; height: 20px; }
-
-  /* SCROLL CONTENT */
-  .content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px 16px 24px;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* CARDS */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 10px;
-  }
-  .card-sm { padding: 12px 16px; }
-
-  /* METRIC GRID */
-  .metrics-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-  .metric-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 14px 14px 12px;
-  }
-  .metric-label {
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text3);
-    margin-bottom: 6px;
-  }
-  .metric-value {
-    font-family: var(--mono);
-    font-size: 22px;
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: -0.03em;
-    font-variant-numeric: tabular-nums;
-  }
-  .metric-value.big { font-size: 28px; }
-  .metric-value.green { color: var(--green); }
-  .metric-value.red { color: var(--red); }
-  .metric-value.yellow { color: var(--yellow); }
-
-  /* HERO CARD */
-  .hero-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 20px;
-    margin-bottom: 10px;
-    position: relative;
-    overflow: hidden;
-  }
-  .hero-card::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at 80% 0%, rgba(74,222,128,0.05) 0%, transparent 60%);
-    pointer-events: none;
-  }
-  .hero-label {
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--text3);
-    margin-bottom: 8px;
-  }
-  .hero-value {
-    font-family: var(--mono);
-    font-size: 48px;
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: -0.04em;
-    color: var(--green);
-    font-variant-numeric: tabular-nums;
-  }
-  .hero-sub {
-    font-size: 13px;
-    color: var(--text2);
-    margin-top: 6px;
-  }
-
-  /* BUTTONS */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 0 20px;
-    height: 52px;
-    border-radius: 14px;
-    border: none;
-    font-family: var(--sans);
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: opacity 0.15s, transform 0.1s;
-    white-space: nowrap;
-    min-width: 48px;
-  }
-  .btn:active { transform: scale(0.97); }
-  .btn-primary { background: var(--text); color: #000; }
-  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
-  .btn-danger { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
-  .btn-ghost { background: none; color: var(--text2); border: 1px solid var(--border); }
-  .btn-sm { height: 40px; padding: 0 16px; font-size: 13px; border-radius: 10px; }
-  .btn-icon { width: 48px; padding: 0; }
-  .btn-full { width: 100%; }
-  .btn svg { width: 18px; height: 18px; flex-shrink: 0; }
-
-  /* INPUT */
-  .input-wrap { margin-bottom: 14px; }
-  .input-label {
-    display: block;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text3);
-    margin-bottom: 6px;
-  }
-  .input {
-    width: 100%;
-    height: 52px;
-    background: var(--surface2);
-    border: 1px solid var(--border2);
-    border-radius: 12px;
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 16px;
-    padding: 0 16px;
-    outline: none;
-    transition: border-color 0.15s;
-    -webkit-appearance: none;
-  }
-  .input:focus { border-color: var(--text3); }
-  .input-mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
-
-  /* TRANSACTION LIST */
-  .tx-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 14px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 6px;
-  }
-  .tx-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-  .tx-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    flex-shrink: 0;
-  }
-  .tx-label { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tx-time { font-size: 11px; color: var(--text3); margin-top: 1px; }
-  .tx-amount {
-    font-family: var(--mono);
-    font-size: 15px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    flex-shrink: 0;
-    margin-left: 8px;
-  }
-  .tx-delete {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    border: none;
-    background: none;
-    color: var(--text3);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    margin-left: 6px;
-    transition: color 0.15s, background 0.15s;
-  }
-  .tx-delete:active { background: rgba(248,113,113,0.1); color: var(--red); }
-
-  /* BOTTOM SHEET */
-  .overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    z-index: 100;
-    display: flex;
-    align-items: flex-end;
-    padding: 0;
-    animation: fadeIn 0.2s ease;
-  }
-  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
-  .sheet {
-    width: 100%;
-    max-width: 480px;
-    margin: 0 auto;
-    background: var(--surface);
-    border-top-left-radius: 24px;
-    border-top-right-radius: 24px;
-    border: 1px solid var(--border);
-    border-bottom: none;
-    padding: 0 0 env(safe-area-inset-bottom);
-    max-height: 90dvh;
-    overflow-y: auto;
-    animation: slideUp 0.25s cubic-bezier(0.32,0.72,0,1);
-    -webkit-overflow-scrolling: touch;
-  }
-  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
-  .sheet-handle {
-    width: 36px;
-    height: 4px;
-    background: var(--border2);
-    border-radius: 2px;
-    margin: 12px auto 0;
-  }
-  .sheet-header {
-    padding: 16px 20px 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .sheet-title { font-size: 17px; font-weight: 600; }
-  .sheet-body { padding: 16px 20px 20px; }
-
-  /* CATEGORY GRID */
-  .cat-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 16px;
-  }
-  .cat-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 14px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
-    text-align: left;
-    min-height: 72px;
-    justify-content: space-between;
-  }
-  .cat-btn.selected { border-color: var(--text); background: rgba(255,255,255,0.05); }
-  .cat-btn:active { transform: scale(0.97); }
-  .cat-btn-icon { font-size: 20px; margin-bottom: 4px; }
-  .cat-btn-label { font-size: 12px; font-weight: 500; color: var(--text); line-height: 1.2; }
-  .cat-btn-amount { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--text2); font-variant-numeric: tabular-nums; }
-
-  /* SECTION */
-  .section-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-    margin-top: 6px;
-  }
-  .section-title {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--text3);
-  }
-
-  /* ACTION ROW */
-  .action-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-
-  /* WORKER ROW */
-  .worker-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 12px 16px;
-    margin-bottom: 10px;
-  }
-  .worker-label { font-size: 13px; color: var(--text2); }
-  .worker-ctrl { display: flex; align-items: center; gap: 12px; }
-  .worker-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    border: 1px solid var(--border2);
-    background: var(--surface2);
-    color: var(--text);
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.15s;
-    flex-shrink: 0;
-  }
-  .worker-btn:active { background: var(--border); }
-  .worker-count { font-family: var(--mono); font-size: 20px; font-weight: 700; min-width: 32px; text-align: center; }
-
-  /* HISTORY */
-  .hist-item {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    margin-bottom: 8px;
-    overflow: hidden;
-  }
-  .hist-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 16px;
-    cursor: pointer;
-    user-select: none;
-    -webkit-user-select: none;
-    min-height: 60px;
-  }
-  .hist-head:active { background: var(--surface2); }
-  .hist-date { font-size: 14px; font-weight: 600; }
-  .hist-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
-  .hist-right { text-align: right; }
-  .hist-pp { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--green); font-variant-numeric: tabular-nums; }
-  .hist-sub-pp { font-size: 11px; color: var(--text3); }
-  .hist-body { border-top: 1px solid var(--border); padding: 12px 16px; }
-
-  /* EMPTY STATE */
-  .empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 20px;
-    text-align: center;
-    gap: 12px;
-  }
-  .empty-icon { font-size: 48px; opacity: 0.3; }
-  .empty-title { font-size: 16px; font-weight: 500; color: var(--text2); }
-  .empty-sub { font-size: 13px; color: var(--text3); }
-
-  /* START SCREEN */
-  .start-screen {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 24px;
-    text-align: center;
-  }
-  .start-logo { font-size: 64px; margin-bottom: 20px; }
-  .start-title { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 8px; }
-  .start-sub { font-size: 14px; color: var(--text2); margin-bottom: 32px; line-height: 1.5; }
-
-  /* SETTINGS */
-  .settings-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 16px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 8px;
-  }
-  .settings-label { font-size: 14px; font-weight: 500; }
-  .settings-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
-  .settings-input {
-    width: 120px;
-    height: 40px;
-    background: var(--surface2);
-    border: 1px solid var(--border2);
-    border-radius: 10px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 15px;
-    font-weight: 700;
-    padding: 0 12px;
-    outline: none;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* DIVIDER */
-  .divider { height: 1px; background: var(--border); margin: 12px 0; }
-
-  /* FILTER PILLS */
-  .filter-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; scrollbar-width: none; }
-  .filter-row::-webkit-scrollbar { display: none; }
-  .pill {
-    flex-shrink: 0;
-    padding: 6px 14px;
-    border-radius: 100px;
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--text2);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    font-family: var(--sans);
-    transition: all 0.15s;
-    white-space: nowrap;
-  }
-  .pill.active { background: var(--surface2); color: var(--text); border-color: var(--border2); }
-
-  /* CONFIRM MODAL */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.8);
-    z-index: 200;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    animation: fadeIn 0.15s;
-  }
-  .modal {
-    width: 100%;
-    max-width: 380px;
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    border-radius: 20px;
-    padding: 24px;
-    animation: scaleIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
-  }
-  @keyframes scaleIn { from{transform:scale(0.9);opacity:0} to{transform:scale(1);opacity:1} }
-  .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-  .modal-body { font-size: 14px; color: var(--text2); line-height: 1.5; margin-bottom: 20px; }
-  .modal-actions { display: flex; gap: 8px; }
-
-  /* TOAST */
-  .toast-wrap {
-    position: fixed;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 300;
-    pointer-events: none;
-  }
-  .toast {
-    background: var(--text);
-    color: #000;
-    font-family: var(--sans);
-    font-size: 13px;
-    font-weight: 600;
-    padding: 10px 20px;
-    border-radius: 100px;
-    animation: toastIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
-    white-space: nowrap;
-  }
-  @keyframes toastIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
-
-  /* MISC */
-  .row { display: flex; align-items: center; gap: 8px; }
-  .flex-1 { flex: 1; }
-  .text-green { color: var(--green); }
-  .text-red { color: var(--red); }
-  .text-muted { color: var(--text2); }
-  .text-xs { font-size: 12px; }
-  .mt-4 { margin-top: 4px; }
-  .mt-8 { margin-top: 8px; }
-  .mb-0 { margin-bottom: 0; }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 0; }
-`;
-
-// ─── ICONS (inline SVG) ───────────────────────────────────────────────────────
-const Icon = ({ name, size = 20, ...props }) => {
-  const paths = {
-    plus: <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
-    minus: <><line x1="5" y1="12" x2="19" y2="12"/></>,
-    x: <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>,
-    check: <><polyline points="20 6 9 17 4 12"/></>,
-    share: <><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></>,
-    copy: <><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></>,
-    clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
-    home: <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
-    history: <><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.96"/></>,
-    settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></>,
-    truck: <><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>,
-    chevron: <><polyline points="6 9 12 15 18 9"/></>,
-    chevronup: <><polyline points="18 15 12 9 6 15"/></>,
-    wallet: <><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></>,
-    alert: <><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>,
-    users: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
-  };
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      {paths[name]}
-    </svg>
-  );
-};
-
-// ─── TOAST ────────────────────────────────────────────────────────────────────
-function Toast({ msg, onDone }) {
-  useEffect(() => { const t = setTimeout(onDone, 2200); return () => clearTimeout(t); }, [onDone]);
-  if (!msg) return null;
-  return <div className="toast-wrap"><div className="toast">{msg}</div></div>;
-}
-
-// ─── BOTTOM SHEET ─────────────────────────────────────────────────────────────
-function Sheet({ title, onClose, children }) {
-  return (
-    <div className="overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="sheet">
-        <div className="sheet-handle" />
-        <div className="sheet-header">
-          <span className="sheet-title">{title}</span>
-          <button className="btn btn-sm btn-ghost btn-icon" onClick={onClose} style={{ height: 36, width: 36 }}>
-            <Icon name="x" size={18} />
-          </button>
-        </div>
-        <div className="sheet-body">{children}</div>
-      </div>
+    <!-- Toast (Bildirim) Mesajı -->
+    <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-3 rounded-full font-bold text-sm shadow-xl z-50 transition-opacity duration-300 opacity-0 pointer-events-none">
+        Mesaj
     </div>
-  );
-}
 
-// ─── CONFIRM MODAL ────────────────────────────────────────────────────────────
-function Confirm({ title, body, confirmLabel = "Evet", confirmClass = "btn-danger", onConfirm, onClose }) {
-  return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
-        <div className="modal-title">{title}</div>
-        <div className="modal-body">{body}</div>
-        <div className="modal-actions">
-          <button className="btn btn-ghost flex-1" onClick={onClose}>İptal</button>
-          <button className={`btn ${confirmClass} flex-1`} onClick={onConfirm}>{confirmLabel}</button>
+    <!-- İş/Gider Ekleme Modalı -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black/80 flex items-end justify-center z-50 p-4 pb-24 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-3xl p-6 shadow-2xl transform transition-transform duration-300 translate-y-full" id="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="modal-title" class="text-xl font-bold">Başlık</h3>
+                <button onclick="closeModal()" class="text-zinc-500 text-3xl font-light active:scale-90">&times;</button>
+            </div>
+            <div id="modal-body" class="space-y-3 max-h-[60vh] overflow-y-auto"></div>
         </div>
-      </div>
     </div>
-  );
-}
 
-// ─── ADD INCOME SHEET ─────────────────────────────────────────────────────────
-function AddIncomeSheet({ categories, onAdd, onClose }) {
-  const [selected, setSelected] = useState(null);
-  const [customAmt, setCustomAmt] = useState("");
-  const [customLabel, setCustomLabel] = useState("");
-  const [count, setCount] = useState(1);
-
-  const cat = categories.find((c) => c.id === selected);
-  const amt = cat ? cat.amount : Number(customAmt) || 0;
-  const total = amt * count;
-
-  const handle = () => {
-    if (!amt || amt <= 0) return;
-    const label = cat ? cat.label : (customLabel || "Özel Gelir");
-    const icon = cat ? cat.icon : "💰";
-    for (let i = 0; i < count; i++) {
-      onAdd({ type: "INCOME", category: label, amount: amt, icon });
-    }
-    onClose();
-  };
-
-  return (
-    <Sheet title="İş Ekle" onClose={onClose}>
-      <div className="cat-grid">
-        {categories.map((c) => (
-          <button key={c.id} className={`cat-btn${selected === c.id ? " selected" : ""}`} onClick={() => { setSelected(c.id); setCustomAmt(""); }}>
-            <span className="cat-btn-icon">{c.icon}</span>
-            <span className="cat-btn-label">{c.label}</span>
-            <span className="cat-btn-amount">{fmt(c.amount)}</span>
-          </button>
-        ))}
-        <button className={`cat-btn${selected === "__custom" ? " selected" : ""}`} onClick={() => { setSelected("__custom"); }}>
-          <span className="cat-btn-icon">✏️</span>
-          <span className="cat-btn-label">Özel Tutar</span>
-          <span className="cat-btn-amount">Manuel</span>
+    <!-- Alt Menü -->
+    <nav class="fixed bottom-0 w-full max-w-md left-1/2 -translate-x-1/2 bg-zinc-950 border-t border-zinc-900 pb-6 pt-3 px-6 flex justify-around items-center h-20 z-40">
+        <button onclick="switchTab('SHIFT')" id="tab-shift" class="flex flex-col items-center gap-1 text-white active:scale-95 transition-transform">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span class="text-[10px] font-bold uppercase tracking-wider mt-1">Vardiya</span>
         </button>
-      </div>
+        <button onclick="switchTab('HISTORY')" id="tab-history" class="flex flex-col items-center gap-1 text-zinc-600 active:scale-95 transition-transform">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+            <span class="text-[10px] font-bold uppercase tracking-wider mt-1">Geçmiş</span>
+        </button>
+    </nav>
 
-      {selected === "__custom" && (
-        <>
-          <div className="input-wrap">
-            <label className="input-label">Açıklama</label>
-            <input className="input" placeholder="Ör: Özel iş" value={customLabel} onChange={(e) => setCustomLabel(e.target.value)} />
-          </div>
-          <div className="input-wrap">
-            <label className="input-label">Tutar (₺)</label>
-            <input className="input input-mono" type="number" inputMode="numeric" placeholder="0" value={customAmt} onChange={(e) => setCustomAmt(e.target.value)} />
-          </div>
-        </>
-      )}
+    <script>
+        // --- İŞ MANTIĞI VE VERİLER ---
+        const PRICING = [
+            { id: 'tam', label: 'Tam Tespit', amount: 7000 },
+            { id: 'yarim', label: 'Yarım Tespit', amount: 3500 },
+            { id: 'koridor', label: 'Koridor', amount: 3500 },
+            { id: 'kapak', label: 'Kapak', amount: 1250 },
+            { id: 'sontaj', label: 'Sontaj', amount: 1250 },
+            { id: 'palet', label: 'Palet Başı', amount: 1000 },
+            { id: 'mazot', label: 'Mazot', amount: 1000 }
+        ];
 
-      {selected && selected !== "__custom" && (
-        <div className="input-wrap">
-          <label className="input-label">Adet</label>
-          <div className="row">
-            <button className="worker-btn" onClick={() => setCount(Math.max(1, count - 1))}>−</button>
-            <span className="worker-count">{count}</span>
-            <button className="worker-btn" onClick={() => setCount(count + 1)}>+</button>
-            <span className="text-muted" style={{ fontSize: 13, marginLeft: 8 }}>× {fmt(cat?.amount)} = <strong style={{ color: "var(--text)", fontFamily: "var(--mono)" }}>{fmt(total)}</strong></span>
-          </div>
-        </div>
-      )}
+        const EXPENSE_TYPES = [
+            { id: 'yemek', label: 'Yemek Masrafı' },
+            { id: 'cay', label: 'Çay / Su / Market' },
+            { id: 'avans', label: 'Ara Avans' },
+            { id: 'diger', label: 'Diğer Gider' }
+        ];
 
-      <button className="btn btn-primary btn-full" onClick={handle} disabled={!selected || (selected === "__custom" && !customAmt)}>
-        <Icon name="plus" />
-        Listeye Ekle {total > 0 && `· ${fmt(total)}`}
-      </button>
-    </Sheet>
-  );
-}
+        // Hafıza Yönetimi
+        let state = JSON.parse(localStorage.getItem('gurbulak_state')) || {
+            activeTab: 'SHIFT',
+            activeShift: null,
+            history: []
+        };
 
-// ─── ADD EXPENSE SHEET ────────────────────────────────────────────────────────
-function AddExpenseSheet({ onAdd, onClose }) {
-  const [selected, setSelected] = useState(null);
-  const [amount, setAmount] = useState("");
-  const [note, setNote] = useState("");
+        function saveState() {
+            localStorage.setItem('gurbulak_state', JSON.stringify(state));
+            render();
+        }
 
-  const handle = () => {
-    const amt = Number(amount);
-    if (!amt || amt <= 0) return;
-    const cat = DEFAULT_EXPENSE_CATEGORIES.find((c) => c.id === selected);
-    onAdd({ type: "EXPENSE", category: cat ? cat.label : "Gider", amount: amt, icon: cat ? cat.icon : "📝", note });
-    onClose();
-  };
+        // Yardımcı Fonksiyonlar
+        const formatMoney = (amount) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(amount);
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+        const getTimestamp = () => new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+        const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('tr-TR', { weekday: 'long', month: 'long', day: 'numeric' });
 
-  return (
-    <Sheet title="Gider Ekle" onClose={onClose}>
-      <div className="cat-grid" style={{ gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginBottom: 14 }}>
-        {DEFAULT_EXPENSE_CATEGORIES.map((c) => (
-          <button key={c.id} style={{ minHeight: 60, padding: "10px 8px" }} className={`cat-btn${selected === c.id ? " selected" : ""}`} onClick={() => setSelected(c.id)}>
-            <span style={{ fontSize: 22 }}>{c.icon}</span>
-            <span style={{ fontSize: 11, fontWeight: 500, textAlign: "center", lineHeight: 1.2, marginTop: 4 }}>{c.label}</span>
-          </button>
-        ))}
-      </div>
-      <div className="input-wrap">
-        <label className="input-label">Tutar (₺)</label>
-        <input className="input input-mono" type="number" inputMode="numeric" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
-      </div>
-      <div className="input-wrap">
-        <label className="input-label">Not (opsiyonel)</label>
-        <input className="input" placeholder="Açıklama..." value={note} onChange={(e) => setNote(e.target.value)} />
-      </div>
-      <button className="btn btn-danger btn-full" onClick={handle} disabled={!amount}>
-        <Icon name="minus" />
-        Gider Kaydet {amount && `· -${fmt(Number(amount))}`}
-      </button>
-    </Sheet>
-  );
-}
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => toast.classList.add('opacity-0'), 3000);
+        }
 
-// ─── ACTIVE SHIFT VIEW ────────────────────────────────────────────────────────
-function ActiveShift({ shift, categories, onUpdate, onClose, onToast }) {
-  const [showIncome, setShowIncome] = useState(false);
-  const [showExpense, setShowExpense] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+        // --- AKSİYONLAR ---
+        function switchTab(tab) {
+            state.activeTab = tab;
+            document.getElementById('tab-shift').className = `flex flex-col items-center gap-1 active:scale-95 transition-transform ${tab === 'SHIFT' ? 'text-white' : 'text-zinc-600'}`;
+            document.getElementById('tab-history').className = `flex flex-col items-center gap-1 active:scale-95 transition-transform ${tab === 'HISTORY' ? 'text-white' : 'text-zinc-600'}`;
+            render();
+        }
 
-  const m = calcMetrics(shift);
+        function startShift() {
+            state.activeShift = {
+                id: generateId(),
+                date: new Date().toISOString(),
+                workerCount: 15,
+                transactions: [],
+            };
+            saveState();
+            showToast('Yeni Vardiya Başladı!');
+        }
 
-  const addTransaction = (tx) => {
-    const updated = {
-      ...shift,
-      transactions: [...shift.transactions, { id: uuid(), ...tx, timestamp: new Date().toISOString() }],
-    };
-    onUpdate(updated);
-  };
+        function closeShift() {
+            if (confirm('Vardiyayı kapatıp arşive eklemek istediğine emin misin?')) {
+                state.history.unshift({ ...state.activeShift, status: 'CLOSED' });
+                state.activeShift = null;
+                state.activeTab = 'HISTORY';
+                showToast('Vardiya arşive eklendi.');
+                saveState();
+            }
+        }
 
-  const removeTransaction = (id) => {
-    const updated = { ...shift, transactions: shift.transactions.filter((t) => t.id !== id) };
-    onUpdate(updated);
-  };
+        function updateWorkerCount(delta) {
+            if (!state.activeShift) return;
+            const newCount = Math.max(1, state.activeShift.workerCount + delta);
+            state.activeShift.workerCount = newCount;
+            saveState();
+        }
 
-  const setWorkers = (n) => {
-    onUpdate({ ...shift, workerCount: Math.max(1, n) });
-  };
+        function addTransaction(type, category, amount) {
+            state.activeShift.transactions.unshift({
+                id: generateId(),
+                type,
+                category,
+                amount: parseInt(amount),
+                timestamp: getTimestamp()
+            });
+            closeModal();
+            showToast(type === 'INCOME' ? 'İş Eklendi!' : 'Gider Eklendi!');
+            saveState();
+        }
 
-  const closeShift = () => {
-    onClose({ ...shift, status: "CLOSED", closedAt: new Date().toISOString() });
-  };
+        function deleteTransaction(id) {
+            if(confirm('Bu işlemi silmek istiyor musun?')) {
+                state.activeShift.transactions = state.activeShift.transactions.filter(t => t.id !== id);
+                saveState();
+            }
+        }
 
-  const share = async () => {
-    const text = buildShareText(shift);
-    try {
-      if (navigator.share) {
-        await navigator.share({ text });
-      } else {
-        await navigator.clipboard.writeText(text);
-        onToast("📋 Panoya kopyalandı!");
-      }
-    } catch {
-      try { await navigator.clipboard.writeText(text); onToast("📋 Panoya kopyalandı!"); } catch {}
-    }
-  };
+        function calculateMetrics(transactions, workerCount) {
+            let gross = 0, expense = 0, count = 0;
+            transactions.forEach(t => {
+                if (t.type === 'INCOME') { gross += t.amount; count++; }
+                else { expense += t.amount; }
+            });
+            const net = gross - expense;
+            const perPerson = Math.floor(net / Math.max(1, workerCount));
+            return { gross, expense, net, perPerson, count };
+        }
 
-  const incomes = shift.transactions.filter((t) => t.type === "INCOME");
-  const expenses = shift.transactions.filter((t) => t.type === "EXPENSE");
+        function copyShareText(index) {
+            const shift = state.history[index];
+            const m = calculateMetrics(shift.transactions, shift.workerCount);
+            const text = `Gürbulak Kasa Özeti\nTarih: ${formatDate(shift.date)}\nİşlenen İş/Tır: ${m.count}\nToplam Brüt: ${formatMoney(m.gross)}\nGiderler: ${formatMoney(m.expense)}\nÇalışan: ${shift.workerCount} Kişi\n\n📌 Kişi Başı Net Yevmiye: ${formatMoney(m.perPerson)}`;
+            
+            // Telefondan kopyalamak için güvenli yöntem
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => showToast('Özet WhatsApp için kopyalandı!'));
+            } else {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                textArea.style.top = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('Özet WhatsApp için kopyalandı!');
+                } catch (err) {
+                    showToast('Kopyalama başarısız oldu.');
+                }
+                textArea.remove();
+            }
+        }
 
-  return (
-    <>
-      <div className="content">
-        {/* Hero */}
-        <div className="hero-card">
-          <div className="hero-label">Kişi Başı Net Yevmiye</div>
-          <div className="hero-value">{fmt(m.perPerson)}</div>
-          <div className="hero-sub">{shift.workerCount} kişi · {fmtDate(shift.date)}</div>
-        </div>
+        // --- MODAL (AÇILIR PENCERE) İŞLEMLERİ ---
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalContent = document.getElementById('modal-content');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
 
-        {/* Metrics */}
-        <div className="metrics-grid">
-          <div className="metric-card">
-            <div className="metric-label">Brüt Kasa</div>
-            <div className="metric-value">{fmt(m.income)}</div>
-          </div>
-          <div className="metric-card">
-            <div className="metric-label">Toplam Gider</div>
-            <div className="metric-value red">{fmt(m.expense)}</div>
-          </div>
-          <div className="metric-card" style={{ gridColumn: "span 2" }}>
-            <div className="metric-label">Net Kasa</div>
-            <div className="metric-value big green">{fmt(m.net)}</div>
-          </div>
-        </div>
+        function openIncomeModal() {
+            modalTitle.innerText = 'Yeni İş Ekle';
+            let html = '';
+            PRICING.forEach(item => {
+                html += `
+                <button onclick="addTransaction('INCOME', '${item.label}', ${item.amount})" class="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl flex justify-between items-center active:scale-95 transition-transform mb-2">
+                    <span class="font-semibold text-lg text-white">${item.label}</span>
+                    <span class="font-bold tabular-nums text-green-400">+${formatMoney(item.amount)}</span>
+                </button>`;
+            });
+            modalBody.innerHTML = html;
+            showModal();
+        }
 
-        {/* Worker Count */}
-        <div className="worker-row">
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 500 }}>Çalışan Sayısı</div>
-            <div className="worker-label">Anlık yevmiye hesabı için</div>
-          </div>
-          <div className="worker-ctrl">
-            <button className="worker-btn" onClick={() => setWorkers(shift.workerCount - 1)}>−</button>
-            <span className="worker-count">{shift.workerCount}</span>
-            <button className="worker-btn" onClick={() => setWorkers(shift.workerCount + 1)}>+</button>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="action-row">
-          <button className="btn btn-primary" onClick={() => setShowIncome(true)}>
-            <Icon name="plus" />İş Ekle
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowExpense(true)}>
-            <Icon name="minus" />Gider Ekle
-          </button>
-        </div>
-
-        {/* Income list */}
-        {incomes.length > 0 && (
-          <>
-            <div className="section-head">
-              <span className="section-title">Gelirler</span>
-              <span className="text-xs text-muted">{incomes.length} işlem</span>
-            </div>
-            {incomes.map((tx) => (
-              <div key={tx.id} className="tx-item">
-                <div className="tx-info">
-                  <div className="tx-icon">{tx.icon || "💰"}</div>
-                  <div>
-                    <div className="tx-label">{tx.category}</div>
-                    <div className="tx-time">{fmtTime(tx.timestamp)}</div>
-                  </div>
-                </div>
-                <span className="tx-amount text-green">+{fmt(tx.amount)}</span>
-                <button className="tx-delete" onClick={() => removeTransaction(tx.id)}><Icon name="x" size={14} /></button>
-              </div>
-            ))}
-          </>
-        )}
-
-        {/* Expense list */}
-        {expenses.length > 0 && (
-          <>
-            <div className="section-head" style={{ marginTop: 8 }}>
-              <span className="section-title">Giderler</span>
-              <span className="text-xs text-muted">{expenses.length} işlem</span>
-            </div>
-            {expenses.map((tx) => (
-              <div key={tx.id} className="tx-item">
-                <div className="tx-info">
-                  <div className="tx-icon">{tx.icon || "📝"}</div>
-                  <div>
-                    <div className="tx-label">{tx.category}{tx.note ? ` · ${tx.note}` : ""}</div>
-                    <div className="tx-time">{fmtTime(tx.timestamp)}</div>
-                  </div>
-                </div>
-                <span className="tx-amount text-red">-{fmt(tx.amount)}</span>
-                <button className="tx-delete" onClick={() => removeTransaction(tx.id)}><Icon name="x" size={14} /></button>
-              </div>
-            ))}
-          </>
-        )}
-
-        {shift.transactions.length === 0 && (
-          <div className="empty" style={{ padding: "40px 20px" }}>
-            <div className="empty-icon">🚛</div>
-            <div className="empty-title">Henüz işlem yok</div>
-            <div className="empty-sub">İş veya gider ekleyerek başlayın</div>
-          </div>
-        )}
-
-        <div className="divider" style={{ margin: "16px 0" }} />
-
-        {/* Bottom actions */}
-        <div className="row">
-          <button className="btn btn-ghost flex-1" onClick={share}>
-            <Icon name="share" />Özeti Paylaş
-          </button>
-          <button className="btn btn-danger flex-1" onClick={() => setShowConfirm(true)}>
-            Vardiyayı Kapat
-          </button>
-        </div>
-      </div>
-
-      {showIncome && <AddIncomeSheet categories={categories} onAdd={addTransaction} onClose={() => setShowIncome(false)} />}
-      {showExpense && <AddExpenseSheet onAdd={addTransaction} onClose={() => setShowExpense(false)} />}
-      {showConfirm && (
-        <Confirm
-          title="Vardiyayı Kapat"
-          body={`Net kasa ${fmt(m.net)} — Kişi başı yevmiye ${fmt(m.perPerson)} olarak kaydedilecek.`}
-          confirmLabel="Kapat ve Kaydet"
-          confirmClass="btn-primary"
-          onConfirm={() => { setShowConfirm(false); closeShift(); }}
-          onClose={() => setShowConfirm(false)}
-        />
-      )}
-    </>
-  );
-}
-
-// ─── HISTORY VIEW ─────────────────────────────────────────────────────────────
-function HistoryView({ history, onToast }) {
-  const [open, setOpen] = useState(null);
-  const [filter, setFilter] = useState("all");
-
-  const sorted = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  const getWeekStart = (iso) => {
-    const d = new Date(iso);
-    const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    d.setDate(d.getDate() + diff);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  };
-
-  const filtered = sorted.filter((s) => {
-    if (filter === "all") return true;
-    if (filter === "thisweek") {
-      const ws = getWeekStart(new Date());
-      const ss = getWeekStart(s.date);
-      return ws.getTime() === ss.getTime();
-    }
-    if (filter === "lastweek") {
-      const ws = getWeekStart(new Date());
-      ws.setDate(ws.getDate() - 7);
-      const ss = getWeekStart(s.date);
-      return ws.getTime() === ss.getTime();
-    }
-    return true;
-  });
-
-  const share = async (shift) => {
-    const text = buildShareText(shift);
-    try {
-      if (navigator.share) await navigator.share({ text });
-      else { await navigator.clipboard.writeText(text); onToast("📋 Panoya kopyalandı!"); }
-    } catch {
-      try { await navigator.clipboard.writeText(text); onToast("📋 Panoya kopyalandı!"); } catch {}
-    }
-  };
-
-  if (history.length === 0) {
-    return (
-      <div className="content">
-        <div className="empty">
-          <div className="empty-icon">📋</div>
-          <div className="empty-title">Henüz geçmiş yok</div>
-          <div className="empty-sub">Vardiyaları kapatınca burada görünür</div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="content">
-      <div className="filter-row">
-        {[{ id: "all", label: "Tümü" }, { id: "thisweek", label: "Bu Hafta" }, { id: "lastweek", label: "Geçen Hafta" }].map((f) => (
-          <button key={f.id} className={`pill${filter === f.id ? " active" : ""}`} onClick={() => setFilter(f.id)}>{f.label}</button>
-        ))}
-      </div>
-
-      {filtered.length === 0 && (
-        <div className="empty" style={{ padding: "40px 20px" }}>
-          <div className="empty-title">Bu dönem için kayıt yok</div>
-        </div>
-      )}
-
-      {filtered.map((shift) => {
-        const m = calcMetrics(shift);
-        const isOpen = open === shift.id;
-        const incomes = shift.transactions.filter((t) => t.type === "INCOME");
-        return (
-          <div key={shift.id} className="hist-item">
-            <div className="hist-head" onClick={() => setOpen(isOpen ? null : shift.id)}>
-              <div>
-                <div className="hist-date">{fmtDate(shift.date)}</div>
-                <div className="hist-meta">{incomes.length} işlem · {shift.workerCount} kişi</div>
-              </div>
-              <div className="hist-right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div>
-                  <div className="hist-pp">{fmt(m.perPerson)}</div>
-                  <div className="hist-sub-pp">kişi başı</div>
-                </div>
-                <Icon name={isOpen ? "chevronup" : "chevron"} size={18} style={{ color: "var(--text3)" }} />
-              </div>
-            </div>
-            {isOpen && (
-              <div className="hist-body">
-                <div className="metrics-grid" style={{ marginBottom: 10 }}>
-                  <div className="metric-card"><div className="metric-label">Brüt</div><div className="metric-value" style={{ fontSize: 18 }}>{fmt(m.income)}</div></div>
-                  <div className="metric-card"><div className="metric-label">Gider</div><div className="metric-value red" style={{ fontSize: 18 }}>{fmt(m.expense)}</div></div>
-                </div>
-                {shift.transactions.map((tx) => (
-                  <div key={tx.id} className="tx-item" style={{ marginBottom: 4 }}>
-                    <div className="tx-info">
-                      <div className="tx-icon" style={{ width: 30, height: 30, fontSize: 13 }}>{tx.icon || (tx.type === "INCOME" ? "💰" : "📝")}</div>
-                      <div>
-                        <div className="tx-label" style={{ fontSize: 13 }}>{tx.category}</div>
-                        <div className="tx-time">{fmtTime(tx.timestamp)}</div>
-                      </div>
+        function openExpenseModal() {
+            modalTitle.innerText = 'Gider Ekle';
+            let options = EXPENSE_TYPES.map(t => `<option value="${t.label}">${t.label}</option>`).join('');
+            modalBody.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-sm text-zinc-400 mb-2 block">Gider Türü</label>
+                        <select id="exp-category" class="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl px-4 py-4 h-14 outline-none">
+                            ${options}
+                        </select>
                     </div>
-                    <span className={`tx-amount ${tx.type === "INCOME" ? "text-green" : "text-red"}`} style={{ fontSize: 13 }}>
-                      {tx.type === "INCOME" ? "+" : "-"}{fmt(tx.amount)}
-                    </span>
-                  </div>
-                ))}
-                <button className="btn btn-ghost btn-sm btn-full" style={{ marginTop: 10 }} onClick={() => share(shift)}>
-                  <Icon name="share" size={14} />Özeti Paylaş
-                </button>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+                    <div>
+                        <label class="text-sm text-zinc-400 mb-2 block">Tutar (₺)</label>
+                        <input id="exp-amount" type="number" placeholder="Örn: 500" class="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl px-4 py-4 h-14 outline-none text-xl font-bold tabular-nums"/>
+                    </div>
+                    <button onclick="submitExpense()" class="w-full bg-white text-black font-bold text-lg rounded-xl h-14 mt-4 active:scale-95 transition-transform">
+                        Gideri Kaydet
+                    </button>
+                </div>
+            `;
+            showModal();
+        }
 
-// ─── SETTINGS VIEW ────────────────────────────────────────────────────────────
-function SettingsView({ categories, onUpdateCategories, onToast }) {
-  const [cats, setCats] = useState(categories);
+        function submitExpense() {
+            const cat = document.getElementById('exp-category').value;
+            const amt = document.getElementById('exp-amount').value;
+            if(!amt || amt <= 0) return showToast('Geçerli bir tutar girin!');
+            addTransaction('EXPENSE', cat, amt);
+        }
 
-  const update = (id, amount) => {
-    const updated = cats.map((c) => (c.id === id ? { ...c, amount: Number(amount) || c.amount } : c));
-    setCats(updated);
-    onUpdateCategories(updated);
-    onToast("✅ Kaydedildi");
-  };
+        function showModal() {
+            modalOverlay.classList.add('modal-enter');
+            modalContent.classList.add('modal-content-enter');
+        }
 
-  return (
-    <div className="content">
-      <div className="section-head">
-        <span className="section-title">Fiyat Listesi</span>
-      </div>
-      {cats.map((c) => (
-        <div key={c.id} className="settings-row">
-          <div>
-            <div className="settings-label">{c.icon} {c.label}</div>
-            <div className="settings-sub">Varsayılan ücret</div>
-          </div>
-          <input
-            className="settings-input"
-            type="number"
-            inputMode="numeric"
-            defaultValue={c.amount}
-            onBlur={(e) => update(c.id, e.target.value)}
-          />
-        </div>
-      ))}
+        function closeModal() {
+            modalOverlay.classList.remove('modal-enter');
+            modalContent.classList.remove('modal-content-enter');
+        }
 
-      <div className="divider" />
-      <div className="section-head"><span className="section-title">Hakkında</span></div>
-      <div className="card">
-        <div style={{ fontSize: 13, color: "var(--text2)", lineHeight: 1.6 }}>
-          <strong style={{ color: "var(--text)", fontFamily: "var(--mono)", fontSize: 12 }}>GÜRBULAK v1.0</strong><br />
-          Offline-first vardiya ve kasa yönetim sistemi.<br />
-          Tüm veriler cihazda yerel olarak saklanır.
-        </div>
-      </div>
-    </div>
-  );
-}
+        // --- EKRAN ÇİZİM (RENDER) MOTORU ---
+        const appRoot = document.getElementById('app-root');
 
-// ─── START SCREEN ─────────────────────────────────────────────────────────────
-function StartScreen({ onStart }) {
-  const [workers, setWorkers] = useState(DEFAULT_WORKER_COUNT);
-  return (
-    <div className="start-screen">
-      <div className="start-logo">🚛</div>
-      <div className="start-title">Vardiya Başlat</div>
-      <div className="start-sub">Günlük kasa takibi için vardiyayı başlatın. Tüm veriler cihazınızda güvenle saklanır.</div>
-      <div className="worker-row" style={{ width: "100%", marginBottom: 20 }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 500 }}>Çalışan Sayısı</div>
-          <div className="worker-label">Bugünkü ekip</div>
-        </div>
-        <div className="worker-ctrl">
-          <button className="worker-btn" onClick={() => setWorkers(Math.max(1, workers - 1))}>−</button>
-          <span className="worker-count">{workers}</span>
-          <button className="worker-btn" onClick={() => setWorkers(workers + 1)}>+</button>
-        </div>
-      </div>
-      <button className="btn btn-primary btn-full" style={{ maxWidth: 320 }} onClick={() => onStart(workers)}>
-        <Icon name="plus" />Yeni Vardiya Başlat
-      </button>
-    </div>
-  );
-}
+        function render() {
+            if (state.activeTab === 'SHIFT') {
+                if (!state.activeShift) {
+                    appRoot.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-[60vh] text-center space-y-6 animate-in fade-in">
+                            <div class="w-24 h-24 bg-zinc-900 rounded-full flex items-center justify-center mb-4 border border-zinc-800 shadow-xl">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-400"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                            </div>
+                            <h2 class="text-2xl font-bold">Vardiya Kapalı</h2>
+                            <p class="text-zinc-500 px-4 text-sm">Hesaplamalara başlamak için yeni bir vardiya oturumu açın.</p>
+                            <button onclick="startShift()" class="w-full max-w-xs bg-white text-black font-bold text-lg rounded-xl h-14 active:scale-95 transition-transform mt-8 shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+                                Yeni Vardiya Başlat
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    const m = calculateMetrics(state.activeShift.transactions, state.activeShift.workerCount);
+                    
+                    let txHtml = state.activeShift.transactions.length === 0 
+                        ? `<p class="text-center text-zinc-600 text-sm py-8 bg-zinc-950 rounded-2xl border border-zinc-900 shadow-inner">Henüz işlem eklenmedi.</p>`
+                        : state.activeShift.transactions.map(tx => `
+                            <div class="bg-zinc-900/80 border border-zinc-800 p-4 rounded-2xl flex justify-between items-center mb-3">
+                                <div>
+                                    <p class="font-bold text-base text-white">${tx.category}</p>
+                                    <p class="text-xs text-zinc-500 mt-1">${tx.timestamp}</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <span class="font-bold tabular-nums ${tx.type === 'INCOME' ? 'text-green-400' : 'text-red-400'}">
+                                        ${tx.type === 'INCOME' ? '+' : '-'}${formatMoney(tx.amount)}
+                                    </span>
+                                    <button onclick="deleteTransaction('${tx.id}')" class="text-zinc-600 hover:text-red-500 p-2 active:scale-75 transition-transform">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('');
 
-// ─── ROOT APP ─────────────────────────────────────────────────────────────────
-export default function App() {
-  const [tab, setTab] = useState("home");
-  const [shift, setShift] = useState(() => storage.get("activeShift", null));
-  const [history, setHistory] = useState(() => storage.get("shiftHistory", []));
-  const [categories, setCategories] = useState(() => storage.get("categories", DEFAULT_CATEGORIES));
-  const [toast, setToast] = useState(null);
-  const toastTimer = useRef(null);
+                    appRoot.innerHTML = `
+                        <div class="space-y-6 pb-8">
+                            <!-- Dashboard -->
+                            <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 relative overflow-hidden shadow-2xl">
+                                <div class="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
+                                <p class="text-zinc-400 text-[11px] font-bold uppercase tracking-widest mb-1">Kişi Başı Net Yevmiye</p>
+                                <h1 class="text-5xl font-black tabular-nums tracking-tighter text-white mb-6">${formatMoney(m.perPerson)}</h1>
+                                
+                                <div class="grid grid-cols-2 gap-4 border-t border-zinc-800 pt-5">
+                                    <div>
+                                        <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1">Brüt Kasa</p>
+                                        <p class="font-bold tabular-nums text-lg text-white">${formatMoney(m.gross)}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1">Giderler</p>
+                                        <p class="font-bold tabular-nums text-lg text-red-400">-${formatMoney(m.expense)}</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between mt-6 bg-black p-3 rounded-xl border border-zinc-800">
+                                    <div class="flex items-center gap-2 text-zinc-400">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                        <span class="text-sm font-semibold">Aktif Çalışan</span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button onclick="updateWorkerCount(-1)" class="w-10 h-10 bg-zinc-800 active:bg-zinc-700 rounded-lg text-2xl font-light flex items-center justify-center">-</button>
+                                        <span class="font-black text-2xl w-10 text-center tabular-nums">${state.activeShift.workerCount}</span>
+                                        <button onclick="updateWorkerCount(1)" class="w-10 h-10 bg-zinc-800 active:bg-zinc-700 rounded-lg text-2xl font-light flex items-center justify-center">+</button>
+                                    </div>
+                                </div>
+                            </div>
 
-  // Persist
-  useEffect(() => { storage.set("activeShift", shift); }, [shift]);
-  useEffect(() => { storage.set("shiftHistory", history); }, [history]);
-  useEffect(() => { storage.set("categories", categories); }, [categories]);
+                            <!-- Butonlar -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <button onclick="openIncomeModal()" class="bg-white text-black font-bold rounded-2xl p-4 flex flex-col items-center justify-center gap-2 h-24 shadow-lg active:scale-95 transition-transform">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                                    <span class="text-sm">İş Ekle</span>
+                                </button>
+                                <button onclick="openExpenseModal()" class="bg-zinc-900 border border-zinc-800 text-white font-bold rounded-2xl p-4 flex flex-col items-center justify-center gap-2 h-24 active:scale-95 transition-transform">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/></svg>
+                                    <span class="text-sm">Gider Ekle</span>
+                                </button>
+                            </div>
 
-  const showToast = useCallback((msg) => {
-    clearTimeout(toastTimer.current);
-    setToast(msg);
-    toastTimer.current = setTimeout(() => setToast(null), 2200);
-  }, []);
+                            <!-- Son İşlemler -->
+                            <div class="mt-8">
+                                <div class="flex justify-between items-center mb-4 px-2">
+                                    <h3 class="font-bold text-zinc-400 text-xs tracking-widest uppercase">Son İşlemler</h3>
+                                    <span class="text-[10px] text-zinc-400 font-bold bg-zinc-900 border border-zinc-800 px-2 py-1 rounded-md tracking-wider">${m.count} İŞLEM</span>
+                                </div>
+                                ${txHtml}
+                            </div>
+                            
+                            ${state.activeShift.transactions.length > 0 ? `
+                            <button onclick="closeShift()" class="w-full border border-red-900/50 text-red-500 font-bold rounded-xl p-4 mt-8 bg-red-950/20 active:bg-red-950/50 transition-colors">
+                                Vardiyayı Kapat ve Arşivle
+                            </button>` : ''}
+                        </div>
+                    `;
+                }
+            } else {
+                // GEÇMİŞ (HISTORY) SEKME
+                let historyHtml = state.history.length === 0 
+                    ? `<div class="text-center py-16 text-zinc-600"><p class="font-medium">Geçmiş kayıt bulunmuyor.</p></div>`
+                    : state.history.map((shift, index) => {
+                        const m = calculateMetrics(shift.transactions, shift.workerCount);
+                        return `
+                            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 mb-4 shadow-lg">
+                                <div class="flex justify-between items-center mb-5 border-b border-zinc-800 pb-4">
+                                    <div>
+                                        <h3 class="font-bold text-lg text-white mb-1">${formatDate(shift.date)}</h3>
+                                        <p class="text-xs text-zinc-400 font-medium">${shift.workerCount} Kişi • ${m.count} İşlem</p>
+                                    </div>
+                                    <button onclick="copyShareText(${index})" class="bg-zinc-800 p-3 rounded-xl text-white active:scale-90 transition-transform flex items-center justify-center gap-2">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p class="text-[10px] text-zinc-500 font-bold tracking-wider mb-1">BRÜT</p>
+                                        <p class="font-bold tabular-nums text-white">${formatMoney(m.gross)}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] text-zinc-500 font-bold tracking-wider mb-1">GİDER</p>
+                                        <p class="font-bold tabular-nums text-red-400">-${formatMoney(m.expense)}</p>
+                                    </div>
+                                    <div class="col-span-2 bg-black p-4 rounded-xl border border-zinc-800 mt-2 flex flex-col items-center">
+                                        <p class="text-[10px] text-zinc-500 font-bold tracking-wider mb-1 text-center">KİŞİ BAŞI NET</p>
+                                        <p class="font-black text-3xl text-center tabular-nums text-green-400">${formatMoney(m.perPerson)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
 
-  const startShift = (workerCount) => {
-    const s = {
-      id: uuid(),
-      date: new Date().toISOString(),
-      workerCount,
-      transactions: [],
-      status: "ACTIVE",
-    };
-    setShift(s);
-    setTab("home");
-  };
+                appRoot.innerHTML = `
+                    <div class="space-y-4 pb-8">
+                        <h2 class="text-2xl font-black px-2 mb-6">Geçmiş Vardiyalar</h2>
+                        ${historyHtml}
+                    </div>
+                `;
+            }
+        }
 
-  const updateShift = (updated) => setShift(updated);
+        // İlk Yükleme
+        render();
+    </script>
+</body>
+</html>
 
-  const closeShift = (closed) => {
-    setHistory((prev) => [closed, ...prev]);
-    setShift(null);
-    setTab("history");
-    showToast("✅ Vardiya kaydedildi!");
-  };
 
-  const m = shift ? calcMetrics(shift) : null;
-  const hasActive = !!shift;
-
-  return (
-    <>
-      <style>{css}</style>
-      <div className="app">
-        {/* Header */}
-        <header className="header">
-          <span className="header-logo">GÜRBULAK</span>
-          <span className="header-title">
-            {tab === "home" ? "Vardiya" : tab === "history" ? "Geçmiş" : "Ayarlar"}
-          </span>
-          <span className={`header-badge ${hasActive ? "badge-active" : "badge-idle"}`}>
-            {hasActive && <span className="dot" />}
-            {hasActive ? "Aktif" : "Beklemede"}
-          </span>
-        </header>
-
-        {/* Content */}
-        {tab === "home" && (
-          hasActive
-            ? <ActiveShift shift={shift} categories={categories} onUpdate={updateShift} onClose={closeShift} onToast={showToast} />
-            : <StartScreen onStart={startShift} />
-        )}
-        {tab === "history" && <HistoryView history={history} onToast={showToast} />}
-        {tab === "settings" && <SettingsView categories={categories} onUpdateCategories={setCategories} onToast={showToast} />}
-
-        {/* Nav */}
-        <nav className="nav">
-          {[
-            { id: "home", icon: "home", label: "Vardiya" },
-            { id: "history", icon: "history", label: "Geçmiş" },
-            { id: "settings", icon: "settings", label: "Ayarlar" },
-          ].map((n) => (
-            <button key={n.id} className={`nav-btn${tab === n.id ? " active" : ""}`} onClick={() => setTab(n.id)}>
-              <Icon name={n.icon} size={22} />
-              {n.label}
-            </button>
-          ))}
-        </nav>
-
-        {/* Toast */}
-        {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
-      </div>
-    </>
-  );
-}
+```
