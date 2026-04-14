@@ -3,63 +3,79 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gürbulak Terminal</title>
-    <!-- Mobil Uygulama Görünümü İçin -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Gürbulak Terminal V4</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#000000">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; -webkit-tap-highlight-color: transparent; }
+        :root { --bg: #09090b; --card: #18181b; --border: #27272a; --accent: #3b82f6; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: #fafafa; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
         .tabular-nums { font-variant-numeric: tabular-nums; }
         ::-webkit-scrollbar { display: none; }
+        
+        /* Çift tıklamada yakınlaştırmayı engeller, butonları hızlandırır */
+        button { touch-action: manipulation; }
+        
         /* Modal Animasyonları */
-        .modal-enter { opacity: 1 !important; pointer-events: auto !important; }
-        .modal-content-enter { transform: translateY(0) !important; }
+        .modal-overlay { opacity: 0; pointer-events: none; transition: opacity 0.25s ease-out; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .modal-overlay.active .modal-content { transform: translateY(0); }
     </style>
 </head>
-<body class="selection:bg-zinc-800 pb-24">
+<body class="pb-28 pt-safe antialiased selection:bg-zinc-800">
 
-    <!-- Üst Bilgi -->
-    <header class="pt-6 pb-4 px-6 sticky top-0 bg-black/90 backdrop-blur-md z-40 border-b border-zinc-900">
-        <h1 class="text-xl font-black uppercase tracking-widest text-center text-white">Gürbulak Terminal</h1>
+    <!-- Üst Bar -->
+    <header class="fixed top-0 w-full max-w-md left-1/2 -translate-x-1/2 z-40 px-5 py-4 bg-[#09090b]/90 backdrop-blur-md border-b border-zinc-800/50 flex justify-between items-center">
+        <h1 class="text-base font-bold tracking-widest uppercase text-white flex items-center gap-2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-blue-500"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            GÜRBULAK
+        </h1>
+        <div id="header-status" class="hidden items-center gap-2 bg-green-500/10 px-2.5 py-1 rounded-full border border-green-500/20">
+            <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+            <span class="text-[10px] font-bold text-green-500 tracking-wider">AKTİF</span>
+        </div>
     </header>
 
-    <!-- Ana İçerik Buraya Gelecek -->
-    <main id="app-root" class="p-4 max-w-md mx-auto"></main>
+    <!-- Ana Ekran -->
+    <main id="app-root" class="p-4 max-w-md mx-auto mt-14"></main>
 
-    <!-- Toast (Bildirim) Mesajı -->
-    <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-3 rounded-full font-bold text-sm shadow-xl z-50 transition-opacity duration-300 opacity-0 pointer-events-none">
-        Mesaj
+    <!-- Bildirim (Toast) -->
+    <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 bg-white text-black px-5 py-3 rounded-2xl font-bold text-sm shadow-[0_10px_40px_rgba(255,255,255,0.2)] z-[60] transition-all duration-300 opacity-0 translate-y-[-20px] pointer-events-none flex items-center gap-2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-green-600"><path d="M20 6 9 17l-5-5"/></svg>
+        <span id="toast-msg">İşlem Başarılı</span>
     </div>
 
-    <!-- İş/Gider Ekleme Modalı -->
-    <div id="modal-overlay" class="fixed inset-0 bg-black/80 flex items-end justify-center z-50 p-4 pb-24 opacity-0 pointer-events-none transition-opacity duration-300">
-        <div class="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-3xl p-6 shadow-2xl transform transition-transform duration-300 translate-y-full" id="modal-content">
-            <div class="flex justify-between items-center mb-6">
-                <h3 id="modal-title" class="text-xl font-bold">Başlık</h3>
-                <button onclick="closeModal()" class="text-zinc-500 text-3xl font-light active:scale-90">&times;</button>
+    <!-- Modal (Gider / Özel İş / Not) -->
+    <div id="modal-container" class="modal-overlay fixed inset-0 bg-black/80 z-50 flex items-end justify-center p-2 pb-safe">
+        <div class="modal-content w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[2rem] p-6 shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center mb-6 shrink-0">
+                <h3 id="modal-title" class="text-xl font-bold tracking-tight text-white">Başlık</h3>
+                <button onclick="closeModal()" class="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400 active:bg-zinc-700 transition-colors">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
             </div>
-            <div id="modal-body" class="space-y-3 max-h-[60vh] overflow-y-auto"></div>
+            <div id="modal-body" class="space-y-4 overflow-y-auto pb-4 custom-scrollbar"></div>
         </div>
     </div>
 
     <!-- Alt Menü -->
-    <nav class="fixed bottom-0 w-full max-w-md left-1/2 -translate-x-1/2 bg-zinc-950 border-t border-zinc-900 pb-6 pt-3 px-6 flex justify-around items-center h-20 z-40">
-        <button onclick="switchTab('SHIFT')" id="tab-shift" class="flex flex-col items-center gap-1 text-white active:scale-95 transition-transform">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            <span class="text-[10px] font-bold uppercase tracking-wider mt-1">Vardiya</span>
+    <nav class="fixed bottom-0 w-full max-w-md left-1/2 -translate-x-1/2 bg-black border-t border-zinc-900 pb-safe pt-2 px-6 flex justify-around items-center h-20 z-40">
+        <button onclick="switchTab('SHIFT')" id="tab-SHIFT" class="flex flex-col items-center gap-1.5 text-white active:scale-95 transition-all w-20">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span class="text-[10px] font-bold tracking-widest uppercase mt-0.5">Vardiya</span>
         </button>
-        <button onclick="switchTab('HISTORY')" id="tab-history" class="flex flex-col items-center gap-1 text-zinc-600 active:scale-95 transition-transform">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
-            <span class="text-[10px] font-bold uppercase tracking-wider mt-1">Geçmiş</span>
+        <button onclick="switchTab('HISTORY')" id="tab-HISTORY" class="flex flex-col items-center gap-1.5 text-zinc-600 active:scale-95 transition-all w-20">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+            <span class="text-[10px] font-bold tracking-widest uppercase mt-0.5">Geçmiş</span>
         </button>
     </nav>
 
     <script>
-        // --- İŞ MANTIĞI VE VERİLER ---
+        // --- SABİT FİYATLANDIRMA LİSTESİ ---
         const PRICING = [
             { id: 'tam', label: 'Tam Tespit', amount: 7000 },
             { id: 'yarim', label: 'Yarım Tespit', amount: 3500 },
@@ -69,171 +85,192 @@
             { id: 'palet', label: 'Palet Başı', amount: 1000 },
             { id: 'mazot', label: 'Mazot', amount: 1000 }
         ];
+        const EXPENSE_TYPES = ['Yemek Masrafı', 'Çay / Su', 'Market', 'Ara Avans', 'Diğer Gider'];
 
-        const EXPENSE_TYPES = [
-            { id: 'yemek', label: 'Yemek Masrafı' },
-            { id: 'cay', label: 'Çay / Su / Market' },
-            { id: 'avans', label: 'Ara Avans' },
-            { id: 'diger', label: 'Diğer Gider' }
-        ];
-
-        // Hafıza Yönetimi
-        let state = JSON.parse(localStorage.getItem('gurbulak_state')) || {
-            activeTab: 'SHIFT',
-            activeShift: null,
-            history: []
+        // --- HAFIZA ---
+        let state = JSON.parse(localStorage.getItem('gurbulak_v4')) || {
+            activeTab: 'SHIFT', activeShift: null, history: [], editingShiftId: null
         };
 
+        // Eski sürümlerden veri göçü (Veriler silinmesin diye)
+        if (state.history.length === 0 && localStorage.getItem('gurbulak_v3')) {
+            let oldState = JSON.parse(localStorage.getItem('gurbulak_v3'));
+            state.history = oldState.history || []; state.activeShift = oldState.activeShift || null;
+            saveState();
+        }
+
         function saveState() {
-            localStorage.setItem('gurbulak_state', JSON.stringify(state));
+            localStorage.setItem('gurbulak_v4', JSON.stringify(state));
             render();
         }
 
-        // Yardımcı Fonksiyonlar
+        // --- YARDIMCI ARAÇLAR ---
         const formatMoney = (amount) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(amount);
         const generateId = () => Math.random().toString(36).substr(2, 9);
         const getTimestamp = () => new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-        const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('tr-TR', { weekday: 'long', month: 'long', day: 'numeric' });
+        const formatDateFriendly = (dateStr) => new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short', weekday: 'long' }).format(new Date(dateStr));
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
-            toast.innerText = msg;
-            toast.classList.remove('opacity-0');
-            setTimeout(() => toast.classList.add('opacity-0'), 3000);
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('opacity-0', 'translate-y-[-20px]');
+            setTimeout(() => toast.classList.add('opacity-0', 'translate-y-[-20px]'), 2000);
         }
 
-        // --- AKSİYONLAR ---
+        // --- TEMEL İŞLEMLER ---
         function switchTab(tab) {
-            state.activeTab = tab;
-            document.getElementById('tab-shift').className = `flex flex-col items-center gap-1 active:scale-95 transition-transform ${tab === 'SHIFT' ? 'text-white' : 'text-zinc-600'}`;
-            document.getElementById('tab-history').className = `flex flex-col items-center gap-1 active:scale-95 transition-transform ${tab === 'HISTORY' ? 'text-white' : 'text-zinc-600'}`;
-            render();
+            state.activeTab = tab; state.editingShiftId = null; 
+            ['SHIFT', 'HISTORY'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if(tab === t) { btn.classList.replace('text-zinc-600', 'text-white'); } 
+                else { btn.classList.replace('text-white', 'text-zinc-600'); }
+            });
+            render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function getTargetShift() {
+            return state.editingShiftId ? state.history.find(s => s.id === state.editingShiftId) : state.activeShift;
         }
 
         function startShift() {
-            state.activeShift = {
-                id: generateId(),
-                date: new Date().toISOString(),
-                workerCount: 15,
-                transactions: [],
-            };
-            saveState();
-            showToast('Yeni Vardiya Başladı!');
+            state.activeShift = { id: generateId(), date: new Date().toISOString(), workerCount: 15, transactions: [], note: '' };
+            saveState(); showToast('Vardiya Başlatıldı');
         }
 
         function closeShift() {
-            if (confirm('Vardiyayı kapatıp arşive eklemek istediğine emin misin?')) {
+            if (confirm('Vardiyayı kapatıp geçmişe arşive eklemek istiyor musunuz?')) {
                 state.history.unshift({ ...state.activeShift, status: 'CLOSED' });
-                state.activeShift = null;
-                state.activeTab = 'HISTORY';
-                showToast('Vardiya arşive eklendi.');
-                saveState();
+                state.activeShift = null; state.activeTab = 'HISTORY';
+                saveState(); switchTab('HISTORY'); showToast('Vardiya Kaydedildi');
             }
         }
 
         function updateWorkerCount(delta) {
-            if (!state.activeShift) return;
-            const newCount = Math.max(1, state.activeShift.workerCount + delta);
-            state.activeShift.workerCount = newCount;
+            let target = getTargetShift(); if (!target) return;
+            target.workerCount = Math.max(1, target.workerCount + delta);
             saveState();
         }
 
+        // --- SAYAÇ VE İŞLEM MANTIĞI (YENİ) ---
+        
+        // İş Ekleme (+)
         function addTransaction(type, category, amount) {
-            state.activeShift.transactions.unshift({
-                id: generateId(),
-                type,
-                category,
-                amount: parseInt(amount),
-                timestamp: getTimestamp()
-            });
-            closeModal();
-            showToast(type === 'INCOME' ? 'İş Eklendi!' : 'Gider Eklendi!');
+            let target = getTargetShift(); if (!target) return;
+            // En başa ekleriz ki son eklenen belli olsun
+            target.transactions.unshift({ id: generateId(), type, category, amount: parseInt(amount), timestamp: getTimestamp() });
             saveState();
+            if(type === 'EXPENSE') { closeModal(); showToast('Gider Eklendi'); }
         }
 
-        function deleteTransaction(id) {
-            if(confirm('Bu işlemi silmek istiyor musun?')) {
-                state.activeShift.transactions = state.activeShift.transactions.filter(t => t.id !== id);
+        // İş Çıkarma (-) -> Sadece o kategoriye ait EN SON ekleneni siler
+        function removeLastTransaction(category) {
+            let target = getTargetShift(); if (!target) return;
+            // unshift ile başa eklediğimiz için, listede bulduğumuz ilk eşleşme EN SON eklenendir.
+            const index = target.transactions.findIndex(t => t.category === category && t.type === 'INCOME');
+            if (index !== -1) {
+                target.transactions.splice(index, 1);
                 saveState();
             }
         }
 
-        function calculateMetrics(transactions, workerCount) {
-            let gross = 0, expense = 0, count = 0;
-            transactions.forEach(t => {
-                if (t.type === 'INCOME') { gross += t.amount; count++; }
-                else { expense += t.amount; }
-            });
-            const net = gross - expense;
-            const perPerson = Math.floor(net / Math.max(1, workerCount));
-            return { gross, expense, net, perPerson, count };
-        }
-
-        function copyShareText(index) {
-            const shift = state.history[index];
-            const m = calculateMetrics(shift.transactions, shift.workerCount);
-            const text = `Gürbulak Kasa Özeti\nTarih: ${formatDate(shift.date)}\nİşlenen İş/Tır: ${m.count}\nToplam Brüt: ${formatMoney(m.gross)}\nGiderler: ${formatMoney(m.expense)}\nÇalışan: ${shift.workerCount} Kişi\n\n📌 Kişi Başı Net Yevmiye: ${formatMoney(m.perPerson)}`;
-            
-            // Telefondan kopyalamak için güvenli yöntem
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(text).then(() => showToast('Özet WhatsApp için kopyalandı!'));
-            } else {
-                const textArea = document.createElement("textarea");
-                textArea.value = text;
-                textArea.style.position = "fixed";
-                textArea.style.left = "-999999px";
-                textArea.style.top = "-999999px";
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    showToast('Özet WhatsApp için kopyalandı!');
-                } catch (err) {
-                    showToast('Kopyalama başarısız oldu.');
-                }
-                textArea.remove();
+        // ID'ye göre direkt silme (Giderler ve Özel İşler için)
+        function deleteTransactionById(id) {
+            if(confirm('Silmek istediğinize emin misiniz?')) {
+                let target = getTargetShift(); if (!target) return;
+                target.transactions = target.transactions.filter(t => t.id !== id);
+                saveState();
             }
         }
 
-        // --- MODAL (AÇILIR PENCERE) İŞLEMLERİ ---
-        const modalOverlay = document.getElementById('modal-overlay');
-        const modalContent = document.getElementById('modal-content');
+        // Metrikleri Hesapla (Gruplama dahil)
+        function calculateMetrics(transactions, workerCount) {
+            let gross = 0, expense = 0, count = 0;
+            let groupCounts = {}; // { 'Tam Tespit': 3, 'Kapak': 1 }
+            let expensesList = [];
+            let customIncomes = [];
+
+            // Grupları sıfırdan başlat
+            PRICING.forEach(p => groupCounts[p.label] = 0);
+
+            transactions.forEach(t => {
+                if (t.type === 'INCOME') { 
+                    gross += t.amount; 
+                    count++; 
+                    if (groupCounts[t.category] !== undefined) {
+                        groupCounts[t.category]++;
+                    } else {
+                        customIncomes.push(t);
+                    }
+                }
+                else { 
+                    expense += t.amount; 
+                    expensesList.push(t);
+                }
+            });
+
+            const net = gross - expense;
+            const perPerson = Math.floor(net / Math.max(1, workerCount));
+            return { gross, expense, net, perPerson, count, groupCounts, expensesList, customIncomes };
+        }
+
+        // --- WHATSAPP PAYLAŞIMI (FATURA GİBİ ŞIK) ---
+        function shareShift(shiftId) {
+            const shift = state.history.find(s => s.id === shiftId);
+            const m = calculateMetrics(shift.transactions, shift.workerCount);
+            
+            let listText = "";
+            
+            // Standart işleri adetli yaz
+            PRICING.forEach(p => {
+                if(m.groupCounts[p.label] > 0) {
+                    listText += `• ${m.groupCounts[p.label]}x ${p.label}: +${formatMoney(m.groupCounts[p.label] * p.amount)}\n`;
+                }
+            });
+
+            // Özel işleri yaz
+            m.customIncomes.forEach(t => { listText += `• 1x ${t.category}: +${formatMoney(t.amount)}\n`; });
+            
+            // Giderleri yaz
+            if(m.expensesList.length > 0) {
+                listText += `\n*Giderler:*\n`;
+                m.expensesList.forEach(t => { listText += `• ${t.category}: -${formatMoney(t.amount)}\n`; });
+            }
+
+            let noteText = shift.note ? `\n📝 Not: ${shift.note}\n` : '';
+
+            const text = `📋 *GÜRBULAK VARDİYA ÖZETİ*\n📅 ${formatDateFriendly(shift.date)}\n👥 ${shift.workerCount} Çalışan${noteText}\n\n*İşlemler:*\n${listText || 'İşlem yok\n'}\n📊 *Genel Toplam:*\nBrüt Kasa: ${formatMoney(m.gross)}\nGiderler: -${formatMoney(m.expense)}\nNet Dağılan: ${formatMoney(m.net)}\n\n💰 *KİŞİ BAŞI NET: ${formatMoney(m.perPerson)}*`;
+            
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => showToast('Özet Kopyalandı'));
+            } else {
+                const textArea = document.createElement("textarea"); textArea.value = text;
+                textArea.style.position = "fixed"; document.body.appendChild(textArea);
+                textArea.focus(); textArea.select();
+                try { document.execCommand('copy'); showToast('Özet Kopyalandı'); } catch (err) {} textArea.remove();
+            }
+        }
+
+        // --- MODALLAR ---
+        const modalContainer = document.getElementById('modal-container');
         const modalTitle = document.getElementById('modal-title');
         const modalBody = document.getElementById('modal-body');
 
-        function openIncomeModal() {
-            modalTitle.innerText = 'Yeni İş Ekle';
-            let html = '';
-            PRICING.forEach(item => {
-                html += `
-                <button onclick="addTransaction('INCOME', '${item.label}', ${item.amount})" class="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl flex justify-between items-center active:scale-95 transition-transform mb-2">
-                    <span class="font-semibold text-lg text-white">${item.label}</span>
-                    <span class="font-bold tabular-nums text-green-400">+${formatMoney(item.amount)}</span>
-                </button>`;
-            });
-            modalBody.innerHTML = html;
-            showModal();
-        }
-
         function openExpenseModal() {
-            modalTitle.innerText = 'Gider Ekle';
-            let options = EXPENSE_TYPES.map(t => `<option value="${t.label}">${t.label}</option>`).join('');
+            modalTitle.innerText = 'Gider Düş';
+            let options = EXPENSE_TYPES.map(t => `<option value="${t}">${t}</option>`).join('');
             modalBody.innerHTML = `
                 <div class="space-y-4">
                     <div>
-                        <label class="text-sm text-zinc-400 mb-2 block">Gider Türü</label>
-                        <select id="exp-category" class="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl px-4 py-4 h-14 outline-none">
-                            ${options}
+                        <label class="text-[11px] text-zinc-500 font-bold tracking-widest mb-2 block uppercase">Gider Türü</label>
+                        <select id="exp-category" class="w-full bg-black border border-zinc-800 rounded-xl px-4 py-4 h-14 outline-none text-sm text-zinc-200 appearance-none">
+                            ${options} <option value="Manuel Gider">Diğer Gider</option>
                         </select>
                     </div>
                     <div>
-                        <label class="text-sm text-zinc-400 mb-2 block">Tutar (₺)</label>
-                        <input id="exp-amount" type="number" placeholder="Örn: 500" class="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl px-4 py-4 h-14 outline-none text-xl font-bold tabular-nums"/>
+                        <label class="text-[11px] text-zinc-500 font-bold tracking-widest mb-2 block uppercase">Tutar (₺)</label>
+                        <input id="exp-amount" type="number" placeholder="0" class="w-full bg-black border border-zinc-800 rounded-xl px-4 py-4 h-14 outline-none text-xl font-bold tabular-nums text-white"/>
                     </div>
-                    <button onclick="submitExpense()" class="w-full bg-white text-black font-bold text-lg rounded-xl h-14 mt-4 active:scale-95 transition-transform">
-                        Gideri Kaydet
-                    </button>
+                    <button onclick="submitExpense()" class="w-full bg-white text-black font-bold text-sm rounded-xl h-14 mt-2 active:scale-95 transition-transform">Gideri Kaydet</button>
                 </div>
             `;
             showModal();
@@ -242,161 +279,232 @@
         function submitExpense() {
             const cat = document.getElementById('exp-category').value;
             const amt = document.getElementById('exp-amount').value;
-            if(!amt || amt <= 0) return showToast('Geçerli bir tutar girin!');
+            if(!amt || amt <= 0) return showToast('Tutar girin');
             addTransaction('EXPENSE', cat, amt);
         }
 
-        function showModal() {
-            modalOverlay.classList.add('modal-enter');
-            modalContent.classList.add('modal-content-enter');
+        function openCustomJobModal() {
+            modalTitle.innerText = 'Özel / Ekstra İş Ekle';
+            modalBody.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[11px] text-zinc-500 font-bold tracking-widest mb-2 block uppercase">İşin Adı</label>
+                        <input id="custom-inc-label" type="text" placeholder="Örn: Ekstra Taşıma" class="w-full bg-black border border-zinc-800 rounded-xl px-4 py-4 h-14 outline-none text-sm text-white"/>
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-zinc-500 font-bold tracking-widest mb-2 block uppercase">Tutar (₺)</label>
+                        <input id="custom-inc-amount" type="number" placeholder="0" class="w-full bg-black border border-zinc-800 rounded-xl px-4 py-4 h-14 outline-none text-xl font-bold tabular-nums text-white"/>
+                    </div>
+                    <button onclick="submitCustomIncome()" class="w-full bg-blue-600 text-white font-bold text-sm rounded-xl h-14 mt-2 active:scale-95 transition-transform">İşi Ekle</button>
+                </div>
+            `;
+            showModal();
         }
 
-        function closeModal() {
-            modalOverlay.classList.remove('modal-enter');
-            modalContent.classList.remove('modal-content-enter');
+        function submitCustomIncome() {
+            const label = document.getElementById('custom-inc-label').value || 'Özel İşlem';
+            const amt = document.getElementById('custom-inc-amount').value;
+            if(!amt || amt <= 0) return showToast('Tutar girin');
+            addTransaction('INCOME', label, amt);
+            closeModal();
         }
 
-        // --- EKRAN ÇİZİM (RENDER) MOTORU ---
+        function openNoteModal() {
+            modalTitle.innerText = 'Vardiya Notu';
+            const currentNote = getTargetShift().note || '';
+            modalBody.innerHTML = `
+                <div class="space-y-4">
+                    <textarea id="shift-note" rows="4" placeholder="O güne ait hatırlamanız gerekenleri buraya yazın..." class="w-full bg-black border border-zinc-800 rounded-xl p-4 text-sm outline-none text-white resize-none">${currentNote}</textarea>
+                    <button onclick="updateNote(document.getElementById('shift-note').value)" class="w-full bg-white text-black font-bold text-sm rounded-xl h-12 active:scale-95 transition-transform">Notu Kaydet</button>
+                </div>
+            `;
+            showModal();
+        }
+
+        function updateNote(noteText) {
+            let target = getTargetShift(); if (!target) return;
+            target.note = noteText; saveState(); closeModal(); showToast('Not kaydedildi');
+        }
+
+        function showModal() { modalContainer.classList.add('active'); }
+        function closeModal() { modalContainer.classList.remove('active'); }
+
+        // --- GÖRÜNÜM (RENDER) ---
         const appRoot = document.getElementById('app-root');
+        const headerStatus = document.getElementById('header-status');
+
+        function renderDashboardCard(shiftData, isEditMode = false) {
+            const m = calculateMetrics(shiftData.transactions, shiftData.workerCount);
+            
+            // YENİ UI: Sayaç (Counter) Sistemi
+            let countersHtml = PRICING.map(p => {
+                const count = m.groupCounts[p.label];
+                const hasItem = count > 0;
+                return `
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 flex justify-between items-center ${hasItem ? 'border-zinc-600/50 bg-zinc-800/50' : ''}">
+                        <div>
+                            <p class="font-bold text-sm ${hasItem ? 'text-white' : 'text-zinc-300'}">${p.label}</p>
+                            <p class="text-xs font-semibold tabular-nums text-zinc-500 mt-0.5">${formatMoney(p.amount)}</p>
+                        </div>
+                        <div class="flex items-center gap-3 bg-black rounded-xl p-1 border border-zinc-800">
+                            <button onclick="removeLastTransaction('${p.label}')" class="w-10 h-10 flex items-center justify-center text-zinc-400 active:bg-zinc-800 rounded-lg text-2xl pb-1" ${hasItem ? '' : 'disabled'}>-</button>
+                            <span class="font-black text-xl w-6 text-center tabular-nums ${hasItem ? 'text-blue-400' : 'text-zinc-600'}">${count}</span>
+                            <button onclick="addTransaction('INCOME', '${p.label}', ${p.amount})" class="w-10 h-10 flex items-center justify-center text-white bg-zinc-800 active:bg-zinc-700 rounded-lg text-2xl pb-1">+</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Giderler ve Özel İşler Listesi (Sayaç dışındakiler)
+            let extraItemsHtml = '';
+            const extras = [...m.expensesList, ...m.customIncomes];
+            if(extras.length > 0) {
+                extraItemsHtml = `<div class="mt-4 space-y-2">`;
+                extras.forEach(tx => {
+                    extraItemsHtml += `
+                        <div class="flex justify-between items-center p-3 bg-black rounded-xl border border-zinc-800">
+                            <div>
+                                <p class="font-bold text-xs text-white">${tx.category}</p>
+                                <p class="text-[10px] text-zinc-500">${tx.timestamp}</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="font-bold tabular-nums text-sm ${tx.type === 'INCOME' ? 'text-green-400' : 'text-red-400'}">
+                                    ${tx.type === 'INCOME' ? '+' : '-'}${formatMoney(tx.amount)}
+                                </span>
+                                <button onclick="deleteTransactionById('${tx.id}')" class="text-zinc-600 active:scale-75 p-1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+                            </div>
+                        </div>
+                    `;
+                });
+                extraItemsHtml += `</div>`;
+            }
+
+            return `
+                <div class="space-y-4 animate-in fade-in duration-300 pb-6">
+                    ${isEditMode ? `<div class="bg-blue-950/30 text-blue-400 p-3 rounded-xl border border-blue-900/50 text-xs font-bold flex justify-between items-center"><span class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Düzenleme Modu</span> <button onclick="switchTab('HISTORY')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg active:scale-95">Bitti</button></div>` : ''}
+
+                    <!-- ÜST PANEL: Net Yevmiye ve Çalışan -->
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-6 relative overflow-hidden shadow-2xl">
+                        <div class="absolute top-0 right-0 w-40 h-40 bg-zinc-800/30 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                        
+                        <div class="flex justify-between items-start mb-6 border-b border-zinc-800 pb-6">
+                            <div>
+                                <p class="text-zinc-500 text-[10px] font-bold tracking-widest uppercase mb-1">KİŞİ BAŞI NET</p>
+                                <h1 class="text-[2.5rem] leading-none font-black tabular-nums tracking-tighter text-white">${formatMoney(m.perPerson)}</h1>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-zinc-500 text-[10px] font-bold tracking-widest uppercase mb-1">ÇALIŞAN</p>
+                                <div class="flex items-center gap-1 bg-black rounded-xl p-1 border border-zinc-800">
+                                    <button onclick="updateWorkerCount(-1)" class="w-8 h-8 flex items-center justify-center text-zinc-400 active:bg-zinc-800 rounded-lg text-lg font-bold pb-0.5">-</button>
+                                    <span class="font-black text-lg w-8 text-center tabular-nums text-white">${shiftData.workerCount}</span>
+                                    <button onclick="updateWorkerCount(1)" class="w-8 h-8 flex items-center justify-center text-zinc-400 active:bg-zinc-800 rounded-lg text-lg font-bold pb-0.5">+</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-1">BRÜT KASA</p>
+                                <p class="font-bold tabular-nums text-sm text-zinc-300">${formatMoney(m.gross)}</p>
+                            </div>
+                            <div>
+                                <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-1">GİDERLER</p>
+                                <p class="font-bold tabular-nums text-sm text-red-400">-${formatMoney(m.expense)}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- İŞLEM SAYAÇLARI (HIZLI EKLEME) -->
+                    <div class="space-y-2 mt-2">
+                        <div class="flex justify-between items-end px-2 mb-2">
+                            <h3 class="text-[11px] font-black text-zinc-500 tracking-[0.2em] uppercase">TIR İŞLEMLERİ</h3>
+                            <span class="text-[10px] font-bold text-zinc-400 bg-zinc-900 px-2 py-0.5 rounded tracking-wider border border-zinc-800">${m.count} TOPLAM İŞ</span>
+                        </div>
+                        ${countersHtml}
+                    </div>
+
+                    <!-- EKSTRALAR VE NOT -->
+                    ${extraItemsHtml}
+                    
+                    <div class="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-zinc-900">
+                        <button onclick="openExpenseModal()" class="bg-zinc-900 border border-zinc-800 text-zinc-300 font-bold text-xs rounded-xl py-4 flex justify-center items-center gap-2 active:scale-95 transition-transform"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/></svg> GİDER DÜŞ</button>
+                        <button onclick="openCustomJobModal()" class="bg-zinc-900 border border-zinc-800 text-zinc-300 font-bold text-xs rounded-xl py-4 flex justify-center items-center gap-2 active:scale-95 transition-transform"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg> ÖZEL İŞ</button>
+                        <button onclick="openNoteModal()" class="col-span-2 bg-black border border-zinc-800 text-zinc-400 font-bold text-xs rounded-xl py-3 flex justify-center items-center gap-2 active:scale-95 transition-transform">
+                            ${shiftData.note ? '<span class="w-2 h-2 rounded-full bg-blue-500"></span>' : ''}
+                            VARDİYA NOTU EKLE
+                        </button>
+                    </div>
+
+                    ${!isEditMode ? `
+                        <button onclick="closeShift()" class="w-full bg-white text-black font-black text-sm tracking-widest uppercase rounded-2xl py-5 mt-6 active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+                            Vardiyayı Arşive Gönder
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+        }
 
         function render() {
+            headerStatus.style.display = state.activeShift ? 'flex' : 'none';
+
             if (state.activeTab === 'SHIFT') {
                 if (!state.activeShift) {
                     appRoot.innerHTML = `
-                        <div class="flex flex-col items-center justify-center h-[60vh] text-center space-y-6 animate-in fade-in">
-                            <div class="w-24 h-24 bg-zinc-900 rounded-full flex items-center justify-center mb-4 border border-zinc-800 shadow-xl">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-400"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                        <div class="flex flex-col items-center justify-center h-[65vh] text-center space-y-4 animate-in fade-in">
+                            <div class="w-24 h-24 bg-zinc-900/80 rounded-[2rem] flex items-center justify-center border border-zinc-800 mb-2 rotate-12 shadow-2xl">
+                                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-zinc-400 -rotate-12"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
                             </div>
-                            <h2 class="text-2xl font-bold">Vardiya Kapalı</h2>
-                            <p class="text-zinc-500 px-4 text-sm">Hesaplamalara başlamak için yeni bir vardiya oturumu açın.</p>
-                            <button onclick="startShift()" class="w-full max-w-xs bg-white text-black font-bold text-lg rounded-xl h-14 active:scale-95 transition-transform mt-8 shadow-[0_0_20px_rgba(255,255,255,0.2)]">
-                                Yeni Vardiya Başlat
+                            <h2 class="text-2xl font-black text-white tracking-tight">Kasa Kapalı</h2>
+                            <p class="text-sm text-zinc-500 max-w-[250px] font-medium leading-relaxed">Saha hesaplamalarına ve tır eklemelerine başlamak için otorumu açın.</p>
+                            <button onclick="startShift()" class="px-10 py-4 bg-white text-black font-black text-sm tracking-widest uppercase rounded-2xl active:scale-95 transition-transform mt-8 shadow-xl">
+                                VARDİYAYI BAŞLAT
                             </button>
                         </div>
                     `;
                 } else {
-                    const m = calculateMetrics(state.activeShift.transactions, state.activeShift.workerCount);
-                    
-                    let txHtml = state.activeShift.transactions.length === 0 
-                        ? `<p class="text-center text-zinc-600 text-sm py-8 bg-zinc-950 rounded-2xl border border-zinc-900 shadow-inner">Henüz işlem eklenmedi.</p>`
-                        : state.activeShift.transactions.map(tx => `
-                            <div class="bg-zinc-900/80 border border-zinc-800 p-4 rounded-2xl flex justify-between items-center mb-3">
-                                <div>
-                                    <p class="font-bold text-base text-white">${tx.category}</p>
-                                    <p class="text-xs text-zinc-500 mt-1">${tx.timestamp}</p>
-                                </div>
-                                <div class="flex items-center gap-4">
-                                    <span class="font-bold tabular-nums ${tx.type === 'INCOME' ? 'text-green-400' : 'text-red-400'}">
-                                        ${tx.type === 'INCOME' ? '+' : '-'}${formatMoney(tx.amount)}
-                                    </span>
-                                    <button onclick="deleteTransaction('${tx.id}')" class="text-zinc-600 hover:text-red-500 p-2 active:scale-75 transition-transform">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                                    </button>
-                                </div>
-                            </div>
-                        `).join('');
-
-                    appRoot.innerHTML = `
-                        <div class="space-y-6 pb-8">
-                            <!-- Dashboard -->
-                            <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 relative overflow-hidden shadow-2xl">
-                                <div class="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
-                                <p class="text-zinc-400 text-[11px] font-bold uppercase tracking-widest mb-1">Kişi Başı Net Yevmiye</p>
-                                <h1 class="text-5xl font-black tabular-nums tracking-tighter text-white mb-6">${formatMoney(m.perPerson)}</h1>
-                                
-                                <div class="grid grid-cols-2 gap-4 border-t border-zinc-800 pt-5">
-                                    <div>
-                                        <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1">Brüt Kasa</p>
-                                        <p class="font-bold tabular-nums text-lg text-white">${formatMoney(m.gross)}</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1">Giderler</p>
-                                        <p class="font-bold tabular-nums text-lg text-red-400">-${formatMoney(m.expense)}</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="flex items-center justify-between mt-6 bg-black p-3 rounded-xl border border-zinc-800">
-                                    <div class="flex items-center gap-2 text-zinc-400">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                                        <span class="text-sm font-semibold">Aktif Çalışan</span>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <button onclick="updateWorkerCount(-1)" class="w-10 h-10 bg-zinc-800 active:bg-zinc-700 rounded-lg text-2xl font-light flex items-center justify-center">-</button>
-                                        <span class="font-black text-2xl w-10 text-center tabular-nums">${state.activeShift.workerCount}</span>
-                                        <button onclick="updateWorkerCount(1)" class="w-10 h-10 bg-zinc-800 active:bg-zinc-700 rounded-lg text-2xl font-light flex items-center justify-center">+</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Butonlar -->
-                            <div class="grid grid-cols-2 gap-4">
-                                <button onclick="openIncomeModal()" class="bg-white text-black font-bold rounded-2xl p-4 flex flex-col items-center justify-center gap-2 h-24 shadow-lg active:scale-95 transition-transform">
-                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                                    <span class="text-sm">İş Ekle</span>
-                                </button>
-                                <button onclick="openExpenseModal()" class="bg-zinc-900 border border-zinc-800 text-white font-bold rounded-2xl p-4 flex flex-col items-center justify-center gap-2 h-24 active:scale-95 transition-transform">
-                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/></svg>
-                                    <span class="text-sm">Gider Ekle</span>
-                                </button>
-                            </div>
-
-                            <!-- Son İşlemler -->
-                            <div class="mt-8">
-                                <div class="flex justify-between items-center mb-4 px-2">
-                                    <h3 class="font-bold text-zinc-400 text-xs tracking-widest uppercase">Son İşlemler</h3>
-                                    <span class="text-[10px] text-zinc-400 font-bold bg-zinc-900 border border-zinc-800 px-2 py-1 rounded-md tracking-wider">${m.count} İŞLEM</span>
-                                </div>
-                                ${txHtml}
-                            </div>
-                            
-                            ${state.activeShift.transactions.length > 0 ? `
-                            <button onclick="closeShift()" class="w-full border border-red-900/50 text-red-500 font-bold rounded-xl p-4 mt-8 bg-red-950/20 active:bg-red-950/50 transition-colors">
-                                Vardiyayı Kapat ve Arşivle
-                            </button>` : ''}
-                        </div>
-                    `;
+                    appRoot.innerHTML = renderDashboardCard(state.activeShift, false);
                 }
-            } else {
-                // GEÇMİŞ (HISTORY) SEKME
+            } 
+            else if (state.activeTab === 'HISTORY') {
+                if (state.editingShiftId) {
+                    const shift = state.history.find(s => s.id === state.editingShiftId);
+                    if(shift) { appRoot.innerHTML = renderDashboardCard(shift, true); return; }
+                }
+
                 let historyHtml = state.history.length === 0 
-                    ? `<div class="text-center py-16 text-zinc-600"><p class="font-medium">Geçmiş kayıt bulunmuyor.</p></div>`
-                    : state.history.map((shift, index) => {
+                    ? `<div class="text-center py-20 text-zinc-600 font-medium text-sm">Geçmişte kayıtlı vardiya yok.</div>`
+                    : state.history.map(shift => {
                         const m = calculateMetrics(shift.transactions, shift.workerCount);
                         return `
-                            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 mb-4 shadow-lg">
-                                <div class="flex justify-between items-center mb-5 border-b border-zinc-800 pb-4">
+                            <div class="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-5 mb-4 shadow-lg">
+                                <div class="flex justify-between items-start mb-4">
                                     <div>
-                                        <h3 class="font-bold text-lg text-white mb-1">${formatDate(shift.date)}</h3>
-                                        <p class="text-xs text-zinc-400 font-medium">${shift.workerCount} Kişi • ${m.count} İşlem</p>
+                                        <h3 class="font-bold text-base text-white tracking-tight">${formatDateFriendly(shift.date)}</h3>
+                                        <p class="text-[11px] font-bold text-zinc-500 mt-1 tracking-wider">${shift.workerCount} KİŞİ • ${m.count} İŞLEM</p>
                                     </div>
-                                    <button onclick="copyShareText(${index})" class="bg-zinc-800 p-3 rounded-xl text-white active:scale-90 transition-transform flex items-center justify-center gap-2">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
-                                    </button>
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p class="text-[10px] text-zinc-500 font-bold tracking-wider mb-1">BRÜT</p>
-                                        <p class="font-bold tabular-nums text-white">${formatMoney(m.gross)}</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-[10px] text-zinc-500 font-bold tracking-wider mb-1">GİDER</p>
-                                        <p class="font-bold tabular-nums text-red-400">-${formatMoney(m.expense)}</p>
-                                    </div>
-                                    <div class="col-span-2 bg-black p-4 rounded-xl border border-zinc-800 mt-2 flex flex-col items-center">
-                                        <p class="text-[10px] text-zinc-500 font-bold tracking-wider mb-1 text-center">KİŞİ BAŞI NET</p>
-                                        <p class="font-black text-3xl text-center tabular-nums text-green-400">${formatMoney(m.perPerson)}</p>
+                                    <div class="flex gap-2">
+                                        <button onclick="state.editingShiftId = '${shift.id}'; saveState();" class="text-xs font-bold bg-black border border-zinc-800 text-zinc-300 px-3 py-2 rounded-xl active:scale-95">Düzenle</button>
+                                        <button onclick="shareShift('${shift.id}')" class="text-xs font-bold bg-white text-black px-3 py-2 rounded-xl active:scale-95 flex items-center gap-1.5 shadow-md">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg> İLET
+                                        </button>
                                     </div>
                                 </div>
+                                <div class="flex justify-between items-end border-t border-zinc-800/50 pt-4">
+                                    <div>
+                                        <p class="text-[10px] text-zinc-500 font-bold mb-1 tracking-widest uppercase">Brüt / Gider</p>
+                                        <p class="text-sm font-bold tabular-nums text-zinc-300">${formatMoney(m.gross)} <span class="text-red-500 ml-1">-${formatMoney(m.expense)}</span></p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-[10px] text-zinc-500 font-bold mb-1 tracking-widest uppercase">Kişi Başı Net</p>
+                                        <p class="font-black text-2xl tabular-nums text-green-400">${formatMoney(m.perPerson)}</p>
+                                    </div>
+                                </div>
+                                ${shift.note ? `<div class="mt-4 bg-black p-3 rounded-xl border border-zinc-800"><p class="text-[11px] font-medium text-zinc-400 flex gap-2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0 text-zinc-500"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg><span class="truncate">${shift.note}</span></p></div>` : ''}
                             </div>
                         `;
                     }).join('');
 
-                appRoot.innerHTML = `
-                    <div class="space-y-4 pb-8">
-                        <h2 class="text-2xl font-black px-2 mb-6">Geçmiş Vardiyalar</h2>
-                        ${historyHtml}
-                    </div>
-                `;
+                appRoot.innerHTML = `<div class="space-y-2 animate-in fade-in pb-4"><h2 class="text-xl font-black px-2 mb-5 tracking-tight text-white">Geçmiş Vardiyalar</h2>${historyHtml}</div>`;
             }
         }
 
