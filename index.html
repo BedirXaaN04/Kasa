@@ -4,22 +4,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Gürbulak Terminal V4</title>
+    <title>Gürbulak Terminal V5</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#000000">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #09090b; --card: #18181b; --border: #27272a; --accent: #3b82f6; }
+        :root { --bg: #09090b; --card: #18181b; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: #fafafa; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
         .tabular-nums { font-variant-numeric: tabular-nums; }
         ::-webkit-scrollbar { display: none; }
-        
-        /* Çift tıklamada yakınlaştırmayı engeller, butonları hızlandırır */
         button { touch-action: manipulation; }
         
-        /* Modal Animasyonları */
         .modal-overlay { opacity: 0; pointer-events: none; transition: opacity 0.25s ease-out; }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         .modal-content { transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -30,9 +27,9 @@
 
     <!-- Üst Bar -->
     <header class="fixed top-0 w-full max-w-md left-1/2 -translate-x-1/2 z-40 px-5 py-4 bg-[#09090b]/90 backdrop-blur-md border-b border-zinc-800/50 flex justify-between items-center">
-        <h1 class="text-base font-bold tracking-widest uppercase text-white flex items-center gap-2">
+        <h1 class="text-base font-black tracking-widest uppercase text-white flex items-center gap-2">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-blue-500"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-            GÜRBULAK
+            GÜRBULAK <span class="text-[10px] text-zinc-500 font-bold ml-1">V5</span>
         </h1>
         <div id="header-status" class="hidden items-center gap-2 bg-green-500/10 px-2.5 py-1 rounded-full border border-green-500/20">
             <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
@@ -49,7 +46,7 @@
         <span id="toast-msg">İşlem Başarılı</span>
     </div>
 
-    <!-- Modal (Gider / Özel İş / Not) -->
+    <!-- Modallar -->
     <div id="modal-container" class="modal-overlay fixed inset-0 bg-black/80 z-50 flex items-end justify-center p-2 pb-safe">
         <div class="modal-content w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[2rem] p-6 shadow-2xl flex flex-col max-h-[85vh]">
             <div class="flex justify-between items-center mb-6 shrink-0">
@@ -63,44 +60,55 @@
     </div>
 
     <!-- Alt Menü -->
-    <nav class="fixed bottom-0 w-full max-w-md left-1/2 -translate-x-1/2 bg-black border-t border-zinc-900 pb-safe pt-2 px-6 flex justify-around items-center h-20 z-40">
-        <button onclick="switchTab('SHIFT')" id="tab-SHIFT" class="flex flex-col items-center gap-1.5 text-white active:scale-95 transition-all w-20">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <nav class="fixed bottom-0 w-full max-w-md left-1/2 -translate-x-1/2 bg-black border-t border-zinc-900 pb-safe pt-2 px-6 flex justify-between items-center h-20 z-40">
+        <button onclick="switchTab('SHIFT')" id="tab-SHIFT" class="flex flex-col items-center justify-center gap-1.5 text-white active:scale-95 transition-all w-20">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             <span class="text-[10px] font-bold tracking-widest uppercase mt-0.5">Vardiya</span>
         </button>
-        <button onclick="switchTab('HISTORY')" id="tab-HISTORY" class="flex flex-col items-center gap-1.5 text-zinc-600 active:scale-95 transition-all w-20">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+        <button onclick="switchTab('HISTORY')" id="tab-HISTORY" class="flex flex-col items-center justify-center gap-1.5 text-zinc-600 active:scale-95 transition-all w-20">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
             <span class="text-[10px] font-bold tracking-widest uppercase mt-0.5">Geçmiş</span>
+        </button>
+        <button onclick="switchTab('SETTINGS')" id="tab-SETTINGS" class="flex flex-col items-center justify-center gap-1.5 text-zinc-600 active:scale-95 transition-all w-20">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span class="text-[10px] font-bold tracking-widest uppercase mt-0.5">Ayarlar</span>
         </button>
     </nav>
 
     <script>
-        // --- SABİT FİYATLANDIRMA LİSTESİ ---
-        const PRICING = [
-            { id: 'tam', label: 'Tam Tespit', amount: 7000 },
-            { id: 'yarim', label: 'Yarım Tespit', amount: 3500 },
-            { id: 'koridor', label: 'Koridor', amount: 3500 },
-            { id: 'kapak', label: 'Kapak', amount: 1250 },
-            { id: 'sontaj', label: 'Sontaj', amount: 1250 },
-            { id: 'palet', label: 'Palet Başı', amount: 1000 },
-            { id: 'mazot', label: 'Mazot', amount: 1000 }
+        // --- VARSAYILAN FİYATLANDIRMA LİSTESİ ---
+        const DEFAULT_PRICING = [
+            { id: 'p1', label: 'Tam Tespit', amount: 7000 },
+            { id: 'p2', label: 'Yarım Tespit', amount: 3500 },
+            { id: 'p3', label: 'Koridor', amount: 3500 },
+            { id: 'p4', label: 'Kapak', amount: 1250 },
+            { id: 'p5', label: 'Sontaj', amount: 1250 },
+            { id: 'p6', label: 'Palet Başı', amount: 1000 },
+            { id: 'p7', label: 'Mazot', amount: 1000 }
         ];
         const EXPENSE_TYPES = ['Yemek Masrafı', 'Çay / Su', 'Market', 'Ara Avans', 'Diğer Gider'];
 
-        // --- HAFIZA ---
-        let state = JSON.parse(localStorage.getItem('gurbulak_v4')) || {
-            activeTab: 'SHIFT', activeShift: null, history: [], editingShiftId: null
+        // --- HAFIZA (STATE) ---
+        let state = JSON.parse(localStorage.getItem('gurbulak_v5')) || {
+            activeTab: 'SHIFT', activeShift: null, history: [], editingShiftId: null, pricing: DEFAULT_PRICING
         };
 
-        // Eski sürümlerden veri göçü (Veriler silinmesin diye)
-        if (state.history.length === 0 && localStorage.getItem('gurbulak_v3')) {
-            let oldState = JSON.parse(localStorage.getItem('gurbulak_v3'));
+        // Eski sürümlerden veri göçü
+        if (state.history.length === 0 && localStorage.getItem('gurbulak_v4')) {
+            let oldState = JSON.parse(localStorage.getItem('gurbulak_v4'));
             state.history = oldState.history || []; state.activeShift = oldState.activeShift || null;
+            state.pricing = DEFAULT_PRICING;
+            saveState();
+        }
+        
+        // Eğer pricing array'i bir şekilde bozulduysa veya yoksa onar
+        if (!state.pricing || state.pricing.length === 0) {
+            state.pricing = DEFAULT_PRICING;
             saveState();
         }
 
         function saveState() {
-            localStorage.setItem('gurbulak_v4', JSON.stringify(state));
+            localStorage.setItem('gurbulak_v5', JSON.stringify(state));
             render();
         }
 
@@ -120,7 +128,7 @@
         // --- TEMEL İŞLEMLER ---
         function switchTab(tab) {
             state.activeTab = tab; state.editingShiftId = null; 
-            ['SHIFT', 'HISTORY'].forEach(t => {
+            ['SHIFT', 'HISTORY', 'SETTINGS'].forEach(t => {
                 const btn = document.getElementById(`tab-${t}`);
                 if(tab === t) { btn.classList.replace('text-zinc-600', 'text-white'); } 
                 else { btn.classList.replace('text-white', 'text-zinc-600'); }
@@ -138,10 +146,10 @@
         }
 
         function closeShift() {
-            if (confirm('Vardiyayı kapatıp geçmişe arşive eklemek istiyor musunuz?')) {
+            if (confirm('Vardiyayı kapatıp geçmişe eklemek istiyor musunuz?')) {
                 state.history.unshift({ ...state.activeShift, status: 'CLOSED' });
                 state.activeShift = null; state.activeTab = 'HISTORY';
-                saveState(); switchTab('HISTORY'); showToast('Vardiya Kaydedildi');
+                saveState(); switchTab('HISTORY'); showToast('Vardiya Arşivlendi');
             }
         }
 
@@ -151,61 +159,53 @@
             saveState();
         }
 
-        // --- SAYAÇ VE İŞLEM MANTIĞI (YENİ) ---
-        
-        // İş Ekleme (+)
+        // --- İŞLEM MANTIĞI ---
         function addTransaction(type, category, amount) {
             let target = getTargetShift(); if (!target) return;
-            // En başa ekleriz ki son eklenen belli olsun
             target.transactions.unshift({ id: generateId(), type, category, amount: parseInt(amount), timestamp: getTimestamp() });
             saveState();
             if(type === 'EXPENSE') { closeModal(); showToast('Gider Eklendi'); }
         }
 
-        // İş Çıkarma (-) -> Sadece o kategoriye ait EN SON ekleneni siler
         function removeLastTransaction(category) {
             let target = getTargetShift(); if (!target) return;
-            // unshift ile başa eklediğimiz için, listede bulduğumuz ilk eşleşme EN SON eklenendir.
             const index = target.transactions.findIndex(t => t.category === category && t.type === 'INCOME');
-            if (index !== -1) {
-                target.transactions.splice(index, 1);
-                saveState();
-            }
+            if (index !== -1) { target.transactions.splice(index, 1); saveState(); }
         }
 
-        // ID'ye göre direkt silme (Giderler ve Özel İşler için)
         function deleteTransactionById(id) {
-            if(confirm('Silmek istediğinize emin misiniz?')) {
+            if(confirm('Bu işlemi silmek istediğinize emin misiniz?')) {
                 let target = getTargetShift(); if (!target) return;
                 target.transactions = target.transactions.filter(t => t.id !== id);
-                saveState();
+                saveState(); showToast('İşlem Silindi');
+            }
+        }
+        
+        function deleteWholeShift(id) {
+            if(confirm('DİKKAT: Bu vardiyayı tamamen silmek istediğinize emin misiniz? Geri alınamaz!')) {
+                state.history = state.history.filter(s => s.id !== id);
+                state.editingShiftId = null;
+                saveState(); showToast('Vardiya Silindi');
+                switchTab('HISTORY');
             }
         }
 
-        // Metrikleri Hesapla (Gruplama dahil)
         function calculateMetrics(transactions, workerCount) {
             let gross = 0, expense = 0, count = 0;
-            let groupCounts = {}; // { 'Tam Tespit': 3, 'Kapak': 1 }
+            let groupCounts = {}; 
             let expensesList = [];
             let customIncomes = [];
 
-            // Grupları sıfırdan başlat
-            PRICING.forEach(p => groupCounts[p.label] = 0);
+            // Dinamik fiyat listesine göre grupları oluştur
+            state.pricing.forEach(p => groupCounts[p.label] = 0);
 
             transactions.forEach(t => {
                 if (t.type === 'INCOME') { 
-                    gross += t.amount; 
-                    count++; 
-                    if (groupCounts[t.category] !== undefined) {
-                        groupCounts[t.category]++;
-                    } else {
-                        customIncomes.push(t);
-                    }
+                    gross += t.amount; count++; 
+                    if (groupCounts[t.category] !== undefined) { groupCounts[t.category]++; } 
+                    else { customIncomes.push(t); } // Ayarlardan silinmiş veya özel eklenmiş bir iş ise
                 }
-                else { 
-                    expense += t.amount; 
-                    expensesList.push(t);
-                }
+                else { expense += t.amount; expensesList.push(t); }
             });
 
             const net = gross - expense;
@@ -213,24 +213,17 @@
             return { gross, expense, net, perPerson, count, groupCounts, expensesList, customIncomes };
         }
 
-        // --- WHATSAPP PAYLAŞIMI (FATURA GİBİ ŞIK) ---
+        // --- WHATSAPP PAYLAŞIMI ---
         function shareShift(shiftId) {
             const shift = state.history.find(s => s.id === shiftId);
             const m = calculateMetrics(shift.transactions, shift.workerCount);
             
             let listText = "";
-            
-            // Standart işleri adetli yaz
-            PRICING.forEach(p => {
-                if(m.groupCounts[p.label] > 0) {
-                    listText += `• ${m.groupCounts[p.label]}x ${p.label}: +${formatMoney(m.groupCounts[p.label] * p.amount)}\n`;
-                }
+            state.pricing.forEach(p => {
+                if(m.groupCounts[p.label] > 0) { listText += `• ${m.groupCounts[p.label]}x ${p.label}: +${formatMoney(m.groupCounts[p.label] * p.amount)}\n`; }
             });
-
-            // Özel işleri yaz
             m.customIncomes.forEach(t => { listText += `• 1x ${t.category}: +${formatMoney(t.amount)}\n`; });
             
-            // Giderleri yaz
             if(m.expensesList.length > 0) {
                 listText += `\n*Giderler:*\n`;
                 m.expensesList.forEach(t => { listText += `• ${t.category}: -${formatMoney(t.amount)}\n`; });
@@ -240,14 +233,55 @@
 
             const text = `📋 *GÜRBULAK VARDİYA ÖZETİ*\n📅 ${formatDateFriendly(shift.date)}\n👥 ${shift.workerCount} Çalışan${noteText}\n\n*İşlemler:*\n${listText || 'İşlem yok\n'}\n📊 *Genel Toplam:*\nBrüt Kasa: ${formatMoney(m.gross)}\nGiderler: -${formatMoney(m.expense)}\nNet Dağılan: ${formatMoney(m.net)}\n\n💰 *KİŞİ BAŞI NET: ${formatMoney(m.perPerson)}*`;
             
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(text).then(() => showToast('Özet Kopyalandı'));
-            } else {
+            if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(() => showToast('Özet Kopyalandı')); } 
+            else {
                 const textArea = document.createElement("textarea"); textArea.value = text;
                 textArea.style.position = "fixed"; document.body.appendChild(textArea);
                 textArea.focus(); textArea.select();
                 try { document.execCommand('copy'); showToast('Özet Kopyalandı'); } catch (err) {} textArea.remove();
             }
+        }
+
+        // --- AYARLAR (YENİ FİYATLANDIRMA MOTORU) ---
+        function addPricingItem() {
+            state.pricing.push({ id: generateId(), label: '', amount: 0 });
+            saveState();
+            // Scroll to bottom of settings to see new item
+            setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
+        }
+
+        function removePricingItem(id) {
+            if(confirm('Bu iş tipini silmek istiyor musunuz? Geçmiş vardiyalarınızın toplam kazancı bozulmaz.')) {
+                state.pricing = state.pricing.filter(p => p.id !== id);
+                saveState(); showToast('İş Tipi Silindi');
+            }
+        }
+
+        function savePricingSettings() {
+            const items = document.querySelectorAll('.pricing-input-group');
+            let newPricing = [];
+            let hasError = false;
+
+            items.forEach((item) => {
+                const id = item.dataset.id;
+                const label = item.querySelector('.p-label').value.trim();
+                const amount = parseInt(item.querySelector('.p-amount').value);
+                
+                if (label && !isNaN(amount)) {
+                    newPricing.push({ id, label, amount });
+                } else {
+                    hasError = true;
+                }
+            });
+
+            if (newPricing.length === 0) {
+                showToast('Hata: En az 1 iş tipi olmalı!');
+                return;
+            }
+
+            state.pricing = newPricing;
+            saveState();
+            showToast(hasError ? 'Boş alanlar silindi, fiyatlar güncellendi.' : 'Fiyatlar başarıyla güncellendi!');
         }
 
         // --- MODALLAR ---
@@ -284,7 +318,7 @@
         }
 
         function openCustomJobModal() {
-            modalTitle.innerText = 'Özel / Ekstra İş Ekle';
+            modalTitle.innerText = 'Özel İş / Tutar';
             modalBody.innerHTML = `
                 <div class="space-y-4">
                     <div>
@@ -314,7 +348,7 @@
             const currentNote = getTargetShift().note || '';
             modalBody.innerHTML = `
                 <div class="space-y-4">
-                    <textarea id="shift-note" rows="4" placeholder="O güne ait hatırlamanız gerekenleri buraya yazın..." class="w-full bg-black border border-zinc-800 rounded-xl p-4 text-sm outline-none text-white resize-none">${currentNote}</textarea>
+                    <textarea id="shift-note" rows="4" placeholder="Vardiya hakkında notlarınızı buraya yazabilirsiniz..." class="w-full bg-black border border-zinc-800 rounded-xl p-4 text-sm outline-none text-white resize-none">${currentNote}</textarea>
                     <button onclick="updateNote(document.getElementById('shift-note').value)" class="w-full bg-white text-black font-bold text-sm rounded-xl h-12 active:scale-95 transition-transform">Notu Kaydet</button>
                 </div>
             `;
@@ -336,8 +370,8 @@
         function renderDashboardCard(shiftData, isEditMode = false) {
             const m = calculateMetrics(shiftData.transactions, shiftData.workerCount);
             
-            // YENİ UI: Sayaç (Counter) Sistemi
-            let countersHtml = PRICING.map(p => {
+            // Sayaçlar (Dinamik Ayarlardan)
+            let countersHtml = state.pricing.map(p => {
                 const count = m.groupCounts[p.label];
                 const hasItem = count > 0;
                 return `
@@ -355,45 +389,49 @@
                 `;
             }).join('');
 
-            // Giderler ve Özel İşler Listesi (Sayaç dışındakiler)
-            let extraItemsHtml = '';
-            const extras = [...m.expensesList, ...m.customIncomes];
-            if(extras.length > 0) {
-                extraItemsHtml = `<div class="mt-4 space-y-2">`;
-                extras.forEach(tx => {
-                    extraItemsHtml += `
-                        <div class="flex justify-between items-center p-3 bg-black rounded-xl border border-zinc-800">
-                            <div>
-                                <p class="font-bold text-xs text-white">${tx.category}</p>
-                                <p class="text-[10px] text-zinc-500">${tx.timestamp}</p>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <span class="font-bold tabular-nums text-sm ${tx.type === 'INCOME' ? 'text-green-400' : 'text-red-400'}">
-                                    ${tx.type === 'INCOME' ? '+' : '-'}${formatMoney(tx.amount)}
-                                </span>
-                                <button onclick="deleteTransactionById('${tx.id}')" class="text-zinc-600 active:scale-75 p-1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
-                            </div>
+            // Tüm İşlem Dökümü Listesi (Nokta atışı silme için)
+            let allTransactionsHtml = shiftData.transactions.length === 0 ? 
+                `<div class="text-center py-6 text-zinc-600 text-xs font-bold uppercase tracking-widest border border-dashed border-zinc-800 rounded-2xl">Henüz işlem yok</div>` : '';
+            
+            shiftData.transactions.forEach(tx => {
+                allTransactionsHtml += `
+                    <div class="flex justify-between items-center p-3.5 bg-zinc-900 rounded-2xl border border-zinc-800/80 mb-2">
+                        <div>
+                            <p class="font-bold text-sm text-white">${tx.category}</p>
+                            <p class="text-[10px] font-bold text-zinc-500 mt-0.5 tracking-wider">${tx.timestamp}</p>
                         </div>
-                    `;
-                });
-                extraItemsHtml += `</div>`;
-            }
+                        <div class="flex items-center gap-3">
+                            <span class="font-black tabular-nums text-[15px] ${tx.type === 'INCOME' ? 'text-green-400' : 'text-red-400'}">
+                                ${tx.type === 'INCOME' ? '+' : '-'}${formatMoney(tx.amount)}
+                            </span>
+                            <button onclick="deleteTransactionById('${tx.id}')" class="w-8 h-8 flex items-center justify-center bg-red-950/20 text-red-500 rounded-full active:scale-75 transition-transform">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
 
             return `
                 <div class="space-y-4 animate-in fade-in duration-300 pb-6">
-                    ${isEditMode ? `<div class="bg-blue-950/30 text-blue-400 p-3 rounded-xl border border-blue-900/50 text-xs font-bold flex justify-between items-center"><span class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Düzenleme Modu</span> <button onclick="switchTab('HISTORY')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg active:scale-95">Bitti</button></div>` : ''}
+                    ${isEditMode ? `
+                        <div class="bg-blue-950/30 text-blue-400 p-3.5 rounded-xl border border-blue-900/50 text-xs font-bold flex justify-between items-center shadow-lg">
+                            <span class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> GEÇMİŞ VARDİYA DÜZENLENİYOR</span> 
+                            <button onclick="switchTab('HISTORY')" class="bg-blue-600 text-white px-4 py-2 rounded-lg active:scale-95 uppercase tracking-widest text-[10px]">BİTTİ</button>
+                        </div>
+                    ` : ''}
 
-                    <!-- ÜST PANEL: Net Yevmiye ve Çalışan -->
-                    <div class="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-6 relative overflow-hidden shadow-2xl">
+                    <!-- ANA PANO -->
+                    <div class="bg-gradient-to-br from-zinc-900 to-[#111] border border-zinc-800 rounded-[2rem] p-6 relative overflow-hidden shadow-2xl">
                         <div class="absolute top-0 right-0 w-40 h-40 bg-zinc-800/30 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
                         
                         <div class="flex justify-between items-start mb-6 border-b border-zinc-800 pb-6">
                             <div>
-                                <p class="text-zinc-500 text-[10px] font-bold tracking-widest uppercase mb-1">KİŞİ BAŞI NET</p>
+                                <p class="text-zinc-500 text-[10px] font-black tracking-[0.2em] uppercase mb-1">KİŞİ BAŞI NET</p>
                                 <h1 class="text-[2.5rem] leading-none font-black tabular-nums tracking-tighter text-white">${formatMoney(m.perPerson)}</h1>
                             </div>
                             <div class="text-right">
-                                <p class="text-zinc-500 text-[10px] font-bold tracking-widest uppercase mb-1">ÇALIŞAN</p>
+                                <p class="text-zinc-500 text-[10px] font-black tracking-[0.2em] uppercase mb-1">ÇALIŞAN</p>
                                 <div class="flex items-center gap-1 bg-black rounded-xl p-1 border border-zinc-800">
                                     <button onclick="updateWorkerCount(-1)" class="w-8 h-8 flex items-center justify-center text-zinc-400 active:bg-zinc-800 rounded-lg text-lg font-bold pb-0.5">-</button>
                                     <span class="font-black text-lg w-8 text-center tabular-nums text-white">${shiftData.workerCount}</span>
@@ -414,34 +452,117 @@
                         </div>
                     </div>
 
-                    <!-- İŞLEM SAYAÇLARI (HIZLI EKLEME) -->
+                    <!-- İŞLEM SAYAÇLARI -->
                     <div class="space-y-2 mt-2">
                         <div class="flex justify-between items-end px-2 mb-2">
-                            <h3 class="text-[11px] font-black text-zinc-500 tracking-[0.2em] uppercase">TIR İŞLEMLERİ</h3>
-                            <span class="text-[10px] font-bold text-zinc-400 bg-zinc-900 px-2 py-0.5 rounded tracking-wider border border-zinc-800">${m.count} TOPLAM İŞ</span>
+                            <h3 class="text-[11px] font-black text-zinc-500 tracking-[0.2em] uppercase">TIR İŞLEMLERİ (HIZLI EKLE)</h3>
                         </div>
                         ${countersHtml}
                     </div>
-
-                    <!-- EKSTRALAR VE NOT -->
-                    ${extraItemsHtml}
                     
+                    <!-- BUTONLAR -->
                     <div class="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-zinc-900">
-                        <button onclick="openExpenseModal()" class="bg-zinc-900 border border-zinc-800 text-zinc-300 font-bold text-xs rounded-xl py-4 flex justify-center items-center gap-2 active:scale-95 transition-transform"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/></svg> GİDER DÜŞ</button>
-                        <button onclick="openCustomJobModal()" class="bg-zinc-900 border border-zinc-800 text-zinc-300 font-bold text-xs rounded-xl py-4 flex justify-center items-center gap-2 active:scale-95 transition-transform"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg> ÖZEL İŞ</button>
-                        <button onclick="openNoteModal()" class="col-span-2 bg-black border border-zinc-800 text-zinc-400 font-bold text-xs rounded-xl py-3 flex justify-center items-center gap-2 active:scale-95 transition-transform">
-                            ${shiftData.note ? '<span class="w-2 h-2 rounded-full bg-blue-500"></span>' : ''}
-                            VARDİYA NOTU EKLE
+                        <button onclick="openExpenseModal()" class="bg-zinc-900 border border-zinc-800 text-white font-bold text-xs tracking-widest rounded-xl py-4 flex justify-center items-center gap-2 active:scale-95 transition-transform"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/></svg> GİDER DÜŞ</button>
+                        <button onclick="openCustomJobModal()" class="bg-zinc-900 border border-zinc-800 text-white font-bold text-xs tracking-widest rounded-xl py-4 flex justify-center items-center gap-2 active:scale-95 transition-transform"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg> ÖZEL İŞ</button>
+                        <button onclick="openNoteModal()" class="col-span-2 bg-black border border-zinc-800 text-zinc-400 font-bold text-xs tracking-widest rounded-xl py-3 flex justify-center items-center gap-2 active:scale-95 transition-transform">
+                            ${shiftData.note ? '<span class="w-2 h-2 rounded-full bg-blue-500"></span>' : ''} VARDİYA NOTU EKLE
                         </button>
+                    </div>
+
+                    <!-- TÜM İŞLEM DÖKÜMÜ (NOKTA ATIŞI SİLME İÇİN) -->
+                    <div class="mt-8">
+                        <div class="flex justify-between items-end px-2 mb-3">
+                            <h3 class="text-[11px] font-black text-zinc-500 tracking-[0.2em] uppercase">TÜM İŞLEM DÖKÜMÜ</h3>
+                            <span class="text-[10px] font-bold text-zinc-400 bg-zinc-900 px-2 py-0.5 rounded tracking-wider border border-zinc-800">${m.count} TOPLAM İŞ</span>
+                        </div>
+                        ${allTransactionsHtml}
                     </div>
 
                     ${!isEditMode ? `
                         <button onclick="closeShift()" class="w-full bg-white text-black font-black text-sm tracking-widest uppercase rounded-2xl py-5 mt-6 active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                            Vardiyayı Arşive Gönder
+                            Vardiyayı Kapat ve Arşivle
                         </button>
-                    ` : ''}
+                    ` : `
+                        <button onclick="deleteWholeShift('${shiftData.id}')" class="w-full border border-red-900/50 bg-red-950/20 text-red-500 font-black text-sm tracking-widest uppercase rounded-2xl py-5 mt-6 active:scale-[0.98] transition-colors">
+                            VARDİYAYI TAMAMEN SİL
+                        </button>
+                    `}
                 </div>
             `;
+        }
+
+        function renderSettings() {
+            let pricingInputsHtml = state.pricing.map((p, idx) => `
+                <div class="pricing-input-group flex gap-2 mb-3 items-center bg-zinc-900 p-2 rounded-xl border border-zinc-800" data-id="${p.id}">
+                    <div class="flex flex-col gap-1 w-full">
+                        <input type="text" value="${p.label}" placeholder="İş Adı" class="p-label w-full bg-black border border-zinc-800 rounded-lg px-3 py-3 text-sm text-white font-bold outline-none focus:border-zinc-500">
+                        <input type="number" value="${p.amount}" placeholder="Tutar ₺" class="p-amount w-full bg-black border border-zinc-800 rounded-lg px-3 py-3 text-sm text-white font-black tabular-nums outline-none focus:border-zinc-500">
+                    </div>
+                    <button onclick="removePricingItem('${p.id}')" class="w-12 shrink-0 flex items-center justify-center text-red-500 active:scale-75 transition-transform h-full">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
+                </div>
+            `).join('');
+
+            return `
+                <div class="space-y-6 animate-in fade-in pb-8">
+                    <h2 class="text-2xl font-black text-white tracking-tight px-2">Ayarlar</h2>
+
+                    <!-- Fiyatlandırma Ayarları -->
+                    <div class="bg-black border border-zinc-800 rounded-[2rem] p-5 shadow-lg">
+                        <div class="mb-5">
+                            <h3 class="text-xs font-black text-zinc-500 tracking-[0.2em] uppercase mb-1">Fiyat & İş Listesi Yönetimi</h3>
+                            <p class="text-xs text-zinc-500 font-medium">Ana ekrandaki sayaç butonlarını buradan düzenleyebilirsiniz. Yaptığınız değişiklikler eski vardiyaların kazançlarını etkilemez.</p>
+                        </div>
+                        
+                        <div id="pricing-settings-container">
+                            ${pricingInputsHtml}
+                        </div>
+
+                        <button onclick="addPricingItem()" class="w-full border border-dashed border-zinc-700 text-zinc-400 font-bold text-xs tracking-widest uppercase rounded-xl py-4 mt-2 active:bg-zinc-900 transition-colors">
+                            + YENİ İŞ TİPİ EKLE
+                        </button>
+
+                        <button onclick="savePricingSettings()" class="w-full bg-white text-black font-black text-sm tracking-widest uppercase rounded-xl py-4 mt-4 active:scale-[0.98] transition-transform">
+                            FİYATLARI KAYDET
+                        </button>
+                    </div>
+
+                    <!-- Yedekleme -->
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-5">
+                        <h3 class="text-xs font-black text-zinc-500 tracking-[0.2em] uppercase mb-4">Veri Yedekleme</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="exportData()" class="bg-black border border-zinc-800 text-white font-bold text-xs rounded-xl py-4 flex flex-col items-center justify-center gap-2 active:scale-95">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg> İNDİR
+                            </button>
+                            <button onclick="document.getElementById('import-file').click()" class="bg-black border border-zinc-800 text-white font-bold text-xs rounded-xl py-4 flex flex-col items-center justify-center gap-2 active:scale-95">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg> YÜKLE
+                            </button>
+                            <input type="file" id="import-file" class="hidden" accept=".json" onchange="importData(event)">
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- YEDEKLEME FONKSİYONLARI ---
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+            const dl = document.createElement('a'); dl.setAttribute("href", dataStr);
+            dl.setAttribute("download", `gurbulak_v5_yedek_${new Date().toISOString().split('T')[0]}.json`);
+            dl.click(); showToast('Yedek İndirildi');
+        }
+        function importData(e) {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported && imported.history) { state = imported; saveState(); showToast('Yedek Yüklendi'); } 
+                    else showToast('Hatalı Dosya');
+                } catch (err) { showToast('Dosya Okunamadı'); }
+            };
+            reader.readAsText(file);
         }
 
         function render() {
@@ -505,6 +626,9 @@
                     }).join('');
 
                 appRoot.innerHTML = `<div class="space-y-2 animate-in fade-in pb-4"><h2 class="text-xl font-black px-2 mb-5 tracking-tight text-white">Geçmiş Vardiyalar</h2>${historyHtml}</div>`;
+            }
+            else if (state.activeTab === 'SETTINGS') {
+                appRoot.innerHTML = renderSettings();
             }
         }
 
